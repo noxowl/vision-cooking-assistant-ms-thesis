@@ -1,0 +1,23 @@
+[package]
+name = "VAs-got-vision"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.48"
+opencv = "0.74.0"
+linfa = "0.6.0"
+zmq = "0.10.0"
+tokio = { version = "1.22.0", features = ["full"] }
+pv_cobra = "1.1.4"
+pv_rhino = "2.1.8"
+pv_cheetah = "1.1.0"
+pv_recorder = "1.1.0"
+tokio-core = "0.1.18"
+#crossbeam = "0.8.2"
+#crossbeam-queue = "0.3.8"
+#crossbeam-deque = "0.8.2"
+#crossbeam-channel = "0.5.6"
+#crossbeam-utils = "0.8.14"
