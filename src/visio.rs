@@ -19,6 +19,7 @@ enum CaptureSource {
 pub struct VisioCapture {
     capture_source: CaptureSource,
     current_frame: Mat,
+    current_gaze: Point2f,
     fallback_video_capture: VideoCapture,
 }
 
@@ -27,6 +28,7 @@ impl VisioCapture {
         Self {
             capture_source: CaptureSource::FallbackCam,
             current_frame: Mat::default(),
+            current_gaze: Point2f::default(),
             fallback_video_capture: VideoCapture::default().unwrap(),
         }
     }
@@ -100,57 +102,92 @@ impl VisioCapture {
         }
         Ok(self.current_frame.clone())
     }
+
+    fn capture_gaze_from_pupil(&mut self) {
+
+    }
+
+    fn capture_gaze_from_cam(&mut self) {
+        self.current_gaze = centroid_of_frame(self.current_frame.cols(), self.current_frame.rows())
+    }
+
+    pub async fn capture_gaze(&mut self) -> Result<Point2f> {
+        match self.capture_source {
+            CaptureSource::Pupil => {
+                self.capture_gaze_from_pupil();
+            }
+            CaptureSource::FallbackCam => {
+                self.capture_gaze_from_cam();
+            }
+        }
+        Ok(self.current_gaze.clone())
+    }
+}
+
+fn centroid_of_frame(x: i32, y: i32) -> Point2f {
+    if x > 0 && x > 0 {
+        Point2f::new((x / 2) as f32, (y / 2) as f32)
+    } else {
+        Point2f::new(0., 0.)
+    }
 }
 
 pub struct DetectedMarker {
     pub corner: VectorOfPoint2f,
     pub id: i32,
+    pub centroid: Point2f,
 }
 
 impl DetectedMarker {
-    fn new(corner: Vector<Point2f>, id: i32) -> Self {
+    fn new(corner: Vector<Point2f>, id: i32, centroid: Point2f) -> Self {
         Self {
             corner,
             id,
+            centroid,
         }
     }
 
-    fn update(mut self, corner: Vector<Point2f>, id: i32) {
+    fn update(mut self, corner: Vector<Point2f>, id: i32, centroid: Point2f) {
         self.corner = corner;
         self.id = id;
+        self.centroid = centroid;
     }
     
     fn default() -> Self {
         Self {
             corner: Default::default(),
             id: 0,
+            centroid: Default::default(),
         }
     }
-}
-
-fn centroid(corner: &Point) -> Point {
-    Point::new(corner.x / 2, corner.y / 2)
 }
 
 fn midpoint(px: &Point2f, py: &Point2f) -> Point2f {
     Point2f::new((px.x + py.x) / 2., (px.y + py.y) / 2.)
 }
 
+fn distance(px: &Point2f, py: &Point2f) -> f32 {
+    ((py.x - px.x).abs().powi(2) + (py.y - px.y).abs().powi(2)).sqrt()
+}
+
 pub async fn find_nearest_aruco(gaze: &Point2f, corners: &VectorOfVectorOfPoint2f, ids: &Vector<i32>) -> Result<DetectedMarker> {
     let mut nearest_index = 0;
     if ids.len() > 0 {
-        let mut nearest_mid = Point2f::default();
+        let mut nearest_distance: f32 = 0.0;
         for i in 0..ids.len() {
             let square = corners.get(i).unwrap();
-            let mid = midpoint(gaze, &midpoint(&square.get(0).unwrap(),&square.get(2).unwrap()));
-            if i == 0 || &mid < &nearest_mid {
-                dbg!(&mid);
-                &nearest_mid.clone_from(&mid);
+            let dist = distance(gaze, &midpoint(&square.get(0).unwrap(),&square.get(2).unwrap()));
+            if i == 0 || &dist < &nearest_distance {
+                nearest_distance = dist;
                 *&nearest_index.clone_from(&i);
             }
         }
     }
-    Ok(DetectedMarker::new(corners.get(nearest_index).unwrap(),ids.get(nearest_index).unwrap()))
+    Ok(DetectedMarker::new(
+        corners.get(nearest_index).unwrap(),
+        ids.get(nearest_index).unwrap(),
+        midpoint(&corners.get(nearest_index).unwrap().get(0).unwrap(),&corners.get(nearest_index).unwrap().get(2).unwrap())
+    ))
 }
 
 pub async fn detect_aruco(frame: &Mat) -> Result<(VectorOfVectorOfPoint2f, Vector<i32>)> {

@@ -19,10 +19,13 @@ use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::mpsc::error::SendError;
 use VAs_got_vision::CommonMessage;
 
-async fn draw_debug_frame(frame: Arc<Mutex<Mat>>, halt: &Cell<bool>) {
+async fn draw_debug_frame(frame: Arc<Mutex<Mat>>, gaze: Arc<Mutex<Point2f>>, halt: &Cell<bool>) {
     while !halt.get() {
         {
             let mut frame_lock = frame.lock().unwrap();
+            let mut gaze_lock = gaze.lock().unwrap();
+            cv::imgproc::draw_marker(&mut *frame_lock, Point::new(gaze_lock.x as i32, gaze_lock.y as i32),
+                                     cv::core::Scalar::new(255., 0., 0., 255.), 0, 0, 3, 0);
             cv::highgui::imshow("visio - debug", &*frame_lock).unwrap();
         }
         cv::highgui::wait_key(10).unwrap();
@@ -30,13 +33,20 @@ async fn draw_debug_frame(frame: Arc<Mutex<Mat>>, halt: &Cell<bool>) {
     }
 }
 
-async fn capture_frame(capture: &mut VisioCapture, frame: Arc<Mutex<Mat>>, halt: &Cell<bool>) {
+async fn capture_frame(capture: &mut VisioCapture, frame: Arc<Mutex<Mat>>, gaze: Arc<Mutex<Point2f>>, halt: &Cell<bool>) {
     while !halt.get() {
         match capture.capture().await {
             Ok(m) => {
                 {
                     let mut frame_lock = frame.lock().unwrap();
                     *frame_lock = m;
+                }
+                match capture.capture_gaze().await {
+                    Ok(g) => {
+                        let mut gaze_lock = gaze.lock().unwrap();
+                        *gaze_lock = g;
+                    }
+                    _ => {}
                 }
             },
             _ => {}
@@ -140,11 +150,11 @@ async fn va_main() -> Result<()> {
     recorder.start_listen();
 
     tokio::join!(
-        capture_frame(&mut visio_capture, frame.clone(), &halt),
+        capture_frame(&mut visio_capture, frame.clone(), gaze.clone(), &halt),
         listen_mic(a_tx.clone(), &mut vad, &mut recorder, &halt),
         message_centre(v_tx.clone(), v_rx.clone(), frame.clone(), gaze.clone(),
             a_tx.clone(), a_rx.clone(), &halt),
-        draw_debug_frame(frame.clone(), &halt)
+        draw_debug_frame(frame.clone(), gaze.clone(), &halt)
     );
     Ok(())
 }
