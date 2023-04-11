@@ -1,13 +1,9 @@
-use std::borrow::BorrowMut;
 use anyhow::{anyhow, Result};
-use tokio;
-use std::time::{Duration, Instant};
-use std::future::{pending, Pending};
 use cobra::{Cobra, CobraError};
 use cheetah::{Cheetah, CheetahBuilder, CheetahError};
 // use rhino::{Rhino, RhinoBuilder};
 use pv_recorder::{Recorder, RecorderBuilder};
-use tokio::sync::mpsc::{Receiver, Sender};
+use rhino::{Rhino, RhinoBuilder, RhinoError, RhinoInference};
 
 
 pub struct AudioRecorder {
@@ -15,9 +11,9 @@ pub struct AudioRecorder {
 }
 
 impl AudioRecorder {
-    pub fn new() -> Self {
+    pub fn new(mic_index: i32) -> Self {
         Self {
-            recorder: RecorderBuilder::new().device_index(option_env!("PICOVOICE_MIC_INDEX").unwrap_or("0").parse().unwrap()).init().unwrap(),
+            recorder: RecorderBuilder::new().device_index(mic_index).init().unwrap(),
         }
     }
 
@@ -25,25 +21,61 @@ impl AudioRecorder {
         self.recorder.start().expect("failed to start recording");
     }
 
-    pub async fn listen(&mut self, vad: &mut Cobra) -> Result<bool> {
+    pub async fn listen(&mut self) -> Result<Vec<i16>> {
         let mut pcm = vec![0; self.recorder.frame_length()];
-        self.recorder.read(&mut pcm).expect("failed to read audio frame");
-        let voice_probability = vad.process(&pcm).unwrap();
-        match voice_probability {
-            0.5..1.0 => {
-                Ok(true)
-            }
-            _ => { Ok(false) }
+        match self.recorder.read(&mut pcm) {
+            Ok(_) => Ok(pcm),
+            Err(_) => Err(anyhow!("failed to read audio frame"))
         }
     }
 }
 
-pub fn create_vad() -> Result<Cobra, CobraError> {
-    Cobra::new(option_env!("PICOVOICE_ACCESS_KEY").unwrap_or(""))
+pub fn is_human_voice(pcm: &Vec<i16>, vad: &mut Cobra) -> Result<bool> {
+    match vad.process(&pcm) {
+        Ok(probability) => {
+            dbg!(&probability);
+            match probability {
+                0.4..1.0 => {
+                    Ok(true)
+                }
+                _ => { Ok(false) }
+            }
+        },
+        Err(_) => {
+            Err(anyhow!(""))
+        }
+    }
 }
 
-pub fn create_stt() -> Result<Cheetah, CheetahError> {
-    CheetahBuilder::new().access_key(option_env!("PICOVOICE_ACCESS_KEY").unwrap_or("")).init()
+pub fn process_sti(pcm: &Vec<i16>, sti: &mut Rhino) -> Result<bool>  {
+    match sti.process(&pcm) {
+        Ok(finalized) => {
+            Ok(finalized)
+        },
+        Err(_) => Err(anyhow!("error on sti processing!"))
+    }
+}
+
+pub fn get_inference(sti: &mut Rhino) -> Result<RhinoInference> {
+    match sti.get_inference() {
+        Ok(inference) => Ok(inference),
+        Err(_) => Err(anyhow!("error on getting inference!"))
+    }
+}
+
+pub fn create_vad(api_key: &str) -> Result<Cobra, CobraError> {
+    Cobra::new(api_key)
+}
+
+pub fn create_sti(api_key: &str, context_path: &str) -> Result<Rhino, RhinoError> {
+    RhinoBuilder::new(
+        api_key,
+        context_path
+    ).init()
+}
+
+pub fn create_stt(api_key: &str) -> Result<Cheetah, CheetahError> {
+    CheetahBuilder::new().access_key(api_key).init()
 }
 
 fn next_audio_frame() {

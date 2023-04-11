@@ -22,3 +22,21 @@ PICOVOICE_MIC_INDEX=indexhere
 ## TODO
 * Order sentence recognition.
 * Link to IoT device and Alexa API.
+
+### 개인용 마일스톤 (Korean)
+* 공통
+  * [ ] IoT 기능 (전구)
+  * [ ] IoT 기능 (적외선 해야 할 것 같은데...)
+  * [ ] 이게 뭐야 쿼리 기능
+  * [ ] 날씨 쿼리 기능 (알렉사로 넘기기?)
+  * [X] Picovoice 음성인식
+* 비전
+  * [X] 비전용 메시지센터
+  * [X] 마커인식
+  * [ ] 오브젝트 인식
+* 논비전
+  * [ ] 인식 안된 명령 폴백
+  * [ ] 논비전용 메시지센터
+* 시나리오
+  * [ ] 1인 시나리오
+  * [ ] 2인 시나리오
