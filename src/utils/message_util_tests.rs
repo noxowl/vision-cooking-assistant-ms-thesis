@@ -1,0 +1,66 @@
+#[cfg(test)]
+mod message_util_tests {
+    use std::sync::mpsc;
+    use super::super::message_util::*;
+
+    #[test]
+    fn audio_stream_message_test() {
+        let (sender, receiver) = mpsc::channel::<SmartSpeakerMessage>();
+        audio_stream_message(
+            &sender,
+            SmartSpeakerActors::WakeWordActor,
+            SmartSpeakerActors::CoreActor,
+            vec![],
+        );
+        let message = receiver.recv().unwrap();
+        match message {
+            SmartSpeakerMessage::RequestAudioStream(RequestAudioStream { send_from, send_to, stream }) => {
+                assert_eq!(send_from, SmartSpeakerActors::WakeWordActor);
+                assert_eq!(send_to, SmartSpeakerActors::CoreActor);
+                assert_eq!(stream, vec![]);
+            },
+            _ => {
+                panic!("unexpected message");
+            }
+        }
+    }
+
+    #[test]
+    fn attention_message_test() {
+        let (sender, receiver) = mpsc::channel::<SmartSpeakerMessage>();
+        attention_message(
+            &sender,
+            SmartSpeakerActors::WakeWordActor,
+            SmartSpeakerActors::CoreActor,
+        );
+        let message = receiver.recv().unwrap();
+        match message {
+            SmartSpeakerMessage::RequestAttention(RequestAttention { send_from, send_to }) => {
+                assert_eq!(send_from, SmartSpeakerActors::WakeWordActor);
+                assert_eq!(send_to, SmartSpeakerActors::CoreActor);
+            },
+            _ => {
+                panic!("unexpected message");
+            }
+        }
+    }
+
+    #[test]
+    fn terminate_message_test() {
+        let (sender, receiver) = mpsc::channel::<SmartSpeakerMessage>();
+        terminate_message(
+            &sender,
+            SmartSpeakerActors::WakeWordActor,
+        );
+        let message = receiver.recv().unwrap();
+        match message {
+            SmartSpeakerMessage::ReportTerminated(ReportTerminated { send_from, send_to }) => {
+                assert_eq!(send_from, SmartSpeakerActors::WakeWordActor);
+                assert_eq!(send_to, SmartSpeakerActors::CoreActor);
+            },
+            _ => {
+                panic!("unexpected message");
+            }
+        }
+    }
+}
