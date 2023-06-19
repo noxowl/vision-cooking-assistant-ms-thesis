@@ -1,4 +1,5 @@
 use std::sync::mpsc;
+use opencv::core::Mat;
 use rgb::RGB8;
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
@@ -66,7 +67,8 @@ pub(crate) struct RequestAudioStream {
 pub(crate) struct RequestCameraFrame {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
-    pub frame: Vec<u8>
+    pub frame_data_bytes: Vec<u8>,
+    pub height: i32,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -116,11 +118,13 @@ pub(crate) fn audio_stream_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
 pub(crate) fn camera_frame_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
                                    send_from: SmartSpeakerActors,
                                    send_to: SmartSpeakerActors,
-                                   frame: Vec<u8>) {
+                                   frame_data_bytes: Vec<u8>,
+                                   height: i32) {
     match sender.send(SmartSpeakerMessage::RequestCameraFrame(RequestCameraFrame {
         send_from,
         send_to,
-        frame,
+        frame_data_bytes,
+        height,
     })) {
         Ok(_) => {}
         Err(e) => {

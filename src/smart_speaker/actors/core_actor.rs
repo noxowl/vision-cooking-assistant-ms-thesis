@@ -129,12 +129,14 @@ impl CoreActorMessageHandler {
                 }
                 CoreActorState::WaitForNextMessage {}
             },
-            SmartSpeakerMessage::RequestCameraFrame(RequestCameraFrame { send_from, send_to, frame }) => {
+            SmartSpeakerMessage::RequestCameraFrame(RequestCameraFrame { send_from, send_to,
+                                                        frame_data_bytes, height }) => {
                 if let Some(sender) = senders.get(&send_to) {
                     sender.send(SmartSpeakerMessage::RequestCameraFrame(RequestCameraFrame {
                         send_from,
                         send_to,
-                        frame,
+                        frame_data_bytes,
+                        height,
                     })).expect("TODO: panic message");
                 }
                 CoreActorState::WaitForNextMessage {}

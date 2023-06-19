@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 use anyhow::{anyhow, Result};
-use crate::smart_speaker::models::vision_model::{CameraCaptureSource, CaptureSource, PupilCaptureSource};
+use crate::smart_speaker::models::vision_model::{CameraCaptureSource, Capture, CaptureSource, PupilCaptureSource};
 use crate::utils::camera_util::Camera;
 use crate::utils::pupil_util::{Pupil, PupilRemote};
 
@@ -47,6 +47,21 @@ pub(crate) fn generate_vision_capture_source(source_type: &VisionType) -> Result
         }
     }
 }
+
+pub(crate) fn set_pupil_capture(capture: &mut Capture) -> Result<()> {
+    capture.source = Some(Box::new(
+        PupilCaptureSource::new(
+            Pupil::new(PupilRemote {}))));
+    Err(anyhow!("not implemented"))
+}
+
+pub(crate) fn set_camera_capture(capture: &mut Capture) -> Result<()> {
+    capture.source = Some(Box::new(
+        CameraCaptureSource::new(
+            Camera::new()?)));
+    Ok(())
+}
+
 
 pub(crate) fn centroid_of_frame(x: u32, y: u32) -> (f32, f32) {
     if x > 0 && x > 0 {

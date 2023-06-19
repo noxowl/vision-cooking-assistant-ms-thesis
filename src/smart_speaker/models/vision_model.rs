@@ -8,9 +8,9 @@ use crate::utils::vision_util::VisionType;
 
 /// A capture source is a source of frames, such as a camera or a pupil remote.
 pub(crate) struct Capture {
-    pub source: Option<Box<(dyn CaptureSource + 'static)>>,
-    pub frame: Option<Mat>,
-    pub previous_frames: BoundedVecDeque<Mat>,
+    pub source: Option<Box<(dyn CaptureSource + Send + 'static)>>,
+    // pub frame: Option<Mat>,
+    // pub previous_frames: BoundedVecDeque<Mat>,
 }
 
 impl Capture {
@@ -18,8 +18,8 @@ impl Capture {
     pub fn new() -> Self {
         Self {
             source: None,
-            frame: None,
-            previous_frames: BoundedVecDeque::new(600),
+            // frame: None,
+            // previous_frames: BoundedVecDeque::new(600),
         }
     }
 
@@ -29,22 +29,22 @@ impl Capture {
         }
     }
 
-    pub fn update(&mut self, frame: Mat) {
-        self.frame = Some(frame.clone());
-        self.previous_frames.push_back(frame.clone());
-    }
+    // pub fn update(&mut self, frame: Mat) {
+    //     self.frame = Some(frame.clone());
+    //     self.previous_frames.push_back(frame.clone());
+    // }
 
-    pub fn update_source(&mut self, source: Box<(dyn CaptureSource + 'static)>) {
+    pub fn update_source(&mut self, source: Box<(dyn CaptureSource + Send + 'static)>) {
         self.source = Some(source);
     }
 
-    pub fn get_frame(&mut self) -> Option<Mat> {
-        self.frame.clone()
-    }
+    // pub fn get_frame(&mut self) -> Option<Mat> {
+    //     self.frame.clone()
+    // }
 
-    pub fn get_previous_frames(&self) -> BoundedVecDeque<Mat> {
-        self.previous_frames.clone()
-    }
+    // pub fn get_previous_frames(&self) -> BoundedVecDeque<Mat> {
+    //     self.previous_frames.clone()
+    // }
 
     pub fn get_source_type(&self) -> Option<VisionType> {
         match &self.source {

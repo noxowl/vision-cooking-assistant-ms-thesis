@@ -8,54 +8,38 @@ use crate::utils::camera_util::Camera;
 use crate::utils::pupil_util::{Pupil, PupilRemote};
 use crate::utils::vision_util::VisionType;
 
-pub(crate) fn vision_loop(capture: &mut Capture) -> Result<()> {
-    loop {
-        match capture.source.as_mut() {
-            Some(source) => {
-                let frame = source.get_frame()?;
-                // let (corners, ids) = find_aruco(&frame)?;
-                match capture.get_source_type() {
-                    None => {}
-                    Some(source_type) => {
-                        match source_type {
-                            VisionType::BuiltInCamera => {
-                                // let frame = draw_aruco(&frame, &corners, &ids)?;
-                                capture.update(frame);
-                            }
-                            VisionType::Pupil => {
-                                // let frame = draw_aruco(&frame, &corners, &ids)?;
-                                capture.update(frame);
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-                // let gaze = find_gaze(&frame)?;
-                // let nearest_aruco = find_nearest_aruco(&gaze, &corners, &ids)?;
-                // println!("nearest_aruco: {:?}", nearest_aruco);
-            }
-            None => {
-                println!("no source");
-            }
-        }
-    }
-}
-
-pub(crate) fn set_pupil_capture(capture: &mut Capture) -> Result<()> {
-    capture.source = Some(Box::new(
-        PupilCaptureSource::new(
-            Pupil::new(PupilRemote {}))));
-    Err(anyhow!("not implemented"))
-}
-
-pub(crate) fn set_camera_capture(capture: &mut Capture) -> Result<()> {
-    capture.source = Some(Box::new(
-        CameraCaptureSource::new(
-            Camera::new()?)));
-    Ok(())
-}
-
-
+// pub(crate) fn vision_loop(capture: &mut Capture) -> Result<()> {
+//     loop {
+//         match capture.source.as_mut() {
+//             Some(source) => {
+//                 let frame = source.get_frame()?;
+//                 // let (corners, ids) = find_aruco(&frame)?;
+//                 match capture.get_source_type() {
+//                     None => {}
+//                     Some(source_type) => {
+//                         match source_type {
+//                             VisionType::BuiltInCamera => {
+//                                 // let frame = draw_aruco(&frame, &corners, &ids)?;
+//                                 capture.update(frame);
+//                             }
+//                             VisionType::Pupil => {
+//                                 // let frame = draw_aruco(&frame, &corners, &ids)?;
+//                                 capture.update(frame);
+//                             }
+//                             _ => {}
+//                         }
+//                     }
+//                 }
+//                 // let gaze = find_gaze(&frame)?;
+//                 // let nearest_aruco = find_nearest_aruco(&gaze, &corners, &ids)?;
+//                 // println!("nearest_aruco: {:?}", nearest_aruco);
+//             }
+//             None => {
+//                 println!("no source");
+//             }
+//         }
+//     }
+// }
 
 
 pub(crate) struct DetectedMarker {
