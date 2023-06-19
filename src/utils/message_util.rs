@@ -13,7 +13,7 @@ pub(crate) enum SmartSpeakerActors {
     QueryActor,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) enum SmartSpeakerMessage {
     StringMessage(StringMessage),
     // WakeWordDetected(WakeWordDetected),
@@ -34,63 +34,63 @@ pub(crate) struct WakeWordDetected {
     pub wake_word: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct RequestAttention {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct AttentionFinished {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ReportTerminated {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct RequestShutdown {}
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct RequestAudioStream {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
     pub stream: Vec<i16>
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct RequestCameraFrame {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
     pub frame: Vec<u8>
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct RequestGazeInfo {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
     pub gaze_info: Vec<f32>
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct StringMessage {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
     pub message: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct RgbMessage {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
     pub message: RGB8,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct QueryMessage {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,

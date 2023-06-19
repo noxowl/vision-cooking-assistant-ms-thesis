@@ -85,7 +85,8 @@ impl CoreActorManager {
     }
 }
 
-enum CoreActorState {
+#[derive(Debug, Eq, PartialEq)]
+pub(crate) enum CoreActorState {
     ActorTerminated {
         actor: SmartSpeakerActors,
     },
@@ -96,10 +97,10 @@ enum CoreActorState {
     ShutdownRequested {},
 }
 
-struct CoreActorMessageHandler {}
+pub(crate) struct CoreActorMessageHandler {}
 
 impl CoreActorMessageHandler {
-    fn handle_message(&self, senders: HashMap<SmartSpeakerActors, mpsc::Sender<SmartSpeakerMessage>>, message: SmartSpeakerMessage) -> CoreActorState {
+    pub fn handle_message(&self, senders: HashMap<SmartSpeakerActors, mpsc::Sender<SmartSpeakerMessage>>, message: SmartSpeakerMessage) -> CoreActorState {
         return match message {
             SmartSpeakerMessage::RequestShutdown(RequestShutdown {}) => {
                 for (_, sender) in senders.iter() {
