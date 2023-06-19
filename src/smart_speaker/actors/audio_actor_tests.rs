@@ -14,7 +14,7 @@ mod audio_actor_tests {
         thread::spawn(move || {
             audio_actor.run();
         });
-        thread::sleep(std::time::Duration::from_millis(83)); // cold-start time at development mac mini(2014)
+        thread::sleep(std::time::Duration::from_millis(100)); // cold-start duration at development mac mini(2014)
         actor_tx.send(SmartSpeakerMessage::RequestAudioStream(RequestAudioStream {
             send_from: SmartSpeakerActors::CoreActor,
             send_to: SmartSpeakerActors::AudioActor,
