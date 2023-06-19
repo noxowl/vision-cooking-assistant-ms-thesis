@@ -1,6 +1,4 @@
 use std::sync::mpsc;
-use opencv::core::Mat;
-use rgb::RGB8;
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
 pub(crate) enum SmartSpeakerActors {
@@ -26,13 +24,6 @@ pub(crate) enum SmartSpeakerMessage {
     RequestGazeInfo(RequestGazeInfo),
     RequestAttention(RequestAttention),
     RequestQuery(QueryMessage),
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct WakeWordDetected {
-    pub send_from: SmartSpeakerActors,
-    pub send_to: SmartSpeakerActors,
-    pub wake_word: String,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -83,13 +74,6 @@ pub(crate) struct StringMessage {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
     pub message: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct RgbMessage {
-    pub send_from: SmartSpeakerActors,
-    pub send_to: SmartSpeakerActors,
-    pub message: RGB8,
 }
 
 #[derive(Debug, Clone, PartialEq)]

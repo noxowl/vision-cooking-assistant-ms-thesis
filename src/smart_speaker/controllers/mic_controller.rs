@@ -1,6 +1,5 @@
 use anyhow::{Result};
 use crate::smart_speaker::models::mic_model::{AudioListener, SpeechToIntent};
-use crate::utils::message_util::{RequestAudioStream, SmartSpeakerActors, SmartSpeakerMessage};
 
 pub(crate) fn listen_mic(listener: &mut AudioListener) -> Result<Vec<i16>> {
     let record = listener.update().expect("failed to update from listener");

@@ -10,7 +10,7 @@ mod core_actor_tests {
         let (tx, rx) = mpsc::channel();
         let mut senders = HashMap::new();
         senders.insert(SmartSpeakerActors::CoreActor, tx);
-        let mut handler = CoreActorMessageHandler {};
+        let handler = CoreActorMessageHandler {};
         let message = SmartSpeakerMessage::RequestShutdown(RequestShutdown {});
         let state = handler.handle_message(senders, message);
         assert_eq!(state, CoreActorState::ShutdownRequested {});
@@ -19,7 +19,7 @@ mod core_actor_tests {
 
     #[test]
     fn core_message_handler_terminate_test() {
-        let (tx, rx) = mpsc::channel();
+        let (tx, _) = mpsc::channel();
         let mut senders = HashMap::new();
         senders.insert(SmartSpeakerActors::CoreActor, tx);
         let mut handler = CoreActorMessageHandler {};
@@ -52,7 +52,7 @@ mod core_actor_tests {
 
     #[test]
     fn core_message_handler_attention_test() {
-        let (tx, rx) = mpsc::channel();
+        let (tx, _) = mpsc::channel();
         let mut senders = HashMap::new();
         senders.insert(SmartSpeakerActors::CoreActor, tx);
         let mut handler = CoreActorMessageHandler {};
@@ -66,7 +66,7 @@ mod core_actor_tests {
 
     #[test]
     fn core_message_handler_attention_finished_test() {
-        let (tx, rx) = mpsc::channel();
+        let (tx, _) = mpsc::channel();
         let mut senders = HashMap::new();
         senders.insert(SmartSpeakerActors::CoreActor, tx);
         let mut handler = CoreActorMessageHandler {};

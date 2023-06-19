@@ -4,7 +4,7 @@ use std::time::Duration;
 use opencv::prelude::*;
 use opencv::core::Mat;
 use crate::smart_speaker::controllers::camera_controller;
-use crate::smart_speaker::models::vision_model::{Capture, CaptureSource};
+use crate::smart_speaker::models::vision_model::Capture;
 use crate::utils::message_util::{camera_frame_message, RequestCameraFrame, SmartSpeakerActors, SmartSpeakerMessage};
 
 pub(crate) struct CameraActor {

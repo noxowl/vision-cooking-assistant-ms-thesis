@@ -5,8 +5,7 @@ mod camera_actor_tests {
     use opencv::prelude::*;
     use opencv::core::Mat;
     use crate::smart_speaker::actors::camera_actor::CameraActor;
-    use crate::smart_speaker::models::vision_model::{CameraCaptureSource, Capture};
-    use crate::utils::camera_util::Camera;
+    use crate::smart_speaker::models::vision_model::Capture;
     use crate::utils::message_util::{RequestCameraFrame, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
     use crate::utils::vision_util::set_camera_capture;
 

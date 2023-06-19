@@ -3,10 +3,6 @@ use opencv::{objdetect, imgproc};
 use opencv::prelude::*;
 use opencv::core::{Point, Point2f, Scalar, Vector};
 use opencv::types::{VectorOfi32, VectorOfPoint2f, VectorOfVectorOfPoint2f};
-use crate::smart_speaker::models::vision_model::{CameraCaptureSource, Capture, PupilCaptureSource};
-use crate::utils::camera_util::Camera;
-use crate::utils::pupil_util::{Pupil, PupilRemote};
-use crate::utils::vision_util::VisionType;
 
 // pub(crate) fn vision_loop(capture: &mut Capture) -> Result<()> {
 //     loop {

@@ -45,7 +45,7 @@ impl WakeWordActor {
             SmartSpeakerMessage::RequestShutdown(RequestShutdown {}) => {
                 self.alive = false;
             },
-            SmartSpeakerMessage::RequestAudioStream(RequestAudioStream { send_from, send_to, stream }) => {
+            SmartSpeakerMessage::RequestAudioStream(RequestAudioStream { send_from: _, send_to: _, stream }) => {
                 self.detect_wake_word(stream);
             },
             _ => {

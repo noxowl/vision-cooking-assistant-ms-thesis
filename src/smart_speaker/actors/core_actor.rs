@@ -122,7 +122,7 @@ impl CoreActorMessageHandler {
                         stream,
                     })) {
                         Ok(_) => {},
-                        Err(err) => {
+                        Err(_) => {
                             println!("RequestAudioStream error: {:?} to {:?}", &send_from, &send_to);
                         }
                     }
