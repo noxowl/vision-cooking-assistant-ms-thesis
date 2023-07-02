@@ -18,9 +18,11 @@ impl Camera {
         let mut frame = Mat::default();
         match self.video_capture.is_opened() {
             Ok(true) => {
-                self.video_capture.grab()?;
-                self.video_capture.retrieve(&mut frame, CAP_ANY)?;
-                Ok(frame)
+                if self.video_capture.read(&mut frame).unwrap() {
+                    Ok(frame)
+                } else {
+                    Err(anyhow!("failed to read frame"))
+                }
             }
             Ok(false) => {
                 Err(anyhow!("camera not opened!"))
