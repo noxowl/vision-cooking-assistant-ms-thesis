@@ -10,6 +10,7 @@ pub(crate) struct WakeWordActor {
     core: WakeWordDetector,
     receiver: mpsc::Receiver<SmartSpeakerMessage>,
     sender: mpsc::Sender<SmartSpeakerMessage>,
+    stream_before: Vec<i16>,
 }
 
 impl WakeWordActor {
@@ -19,6 +20,7 @@ impl WakeWordActor {
             core,
             receiver,
             sender,
+            stream_before: vec![],
         }
     }
 
@@ -46,7 +48,10 @@ impl WakeWordActor {
                 self.alive = false;
             },
             SmartSpeakerMessage::RequestAudioStream(RequestAudioStream { send_from: _, send_to: _, stream }) => {
-                self.detect_wake_word(stream);
+                if self.stream_before != stream {
+                    self.stream_before = stream.clone();
+                    self.detect_wake_word(stream);
+                }
             },
             _ => {
                 dbg!("unhandled message");

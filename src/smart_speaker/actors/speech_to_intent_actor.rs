@@ -11,6 +11,7 @@ pub(crate) struct SpeechToIntentActor {
     app: SpeechToIntent,
     receiver: mpsc::Receiver<SmartSpeakerMessage>,
     sender: mpsc::Sender<SmartSpeakerMessage>,
+    stream_before: Vec<i16>,
 }
 
 impl SpeechToIntentActor {
@@ -20,6 +21,7 @@ impl SpeechToIntentActor {
             app,
             receiver,
             sender,
+            stream_before: vec![],
         }
     }
 
@@ -46,7 +48,10 @@ impl SpeechToIntentActor {
                  self.alive = false;
              },
              SmartSpeakerMessage::RequestAudioStream(RequestAudioStream { send_from: _, send_to: _, stream }) => {
-                 self.listen(stream);
+                 if self.stream_before != stream {
+                     self.stream_before = stream.clone();
+                     self.listen(stream);
+                 }
              },
              _ => {
                  dbg!("unhandled message");
