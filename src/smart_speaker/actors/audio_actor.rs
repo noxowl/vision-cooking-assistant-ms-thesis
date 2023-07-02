@@ -32,8 +32,13 @@ impl AudioActor {
             match mic_controller::listen_mic(&mut self.core) {
                 Ok(stream) => {
                     self.stream = stream;
-                    if let Ok(message) = self.receiver.try_recv() {
-                        self.handle_message(message);
+                    let mut pending = true;
+                    while pending {
+                        if let Ok(message) = self.receiver.try_recv() {
+                            self.handle_message(message);
+                        } else {
+                            pending = false;
+                        }
                     }
                 },
                 _ => {}
@@ -64,73 +69,3 @@ impl AudioActor {
         }
     }
 }
-
-//  fn listen_mic(tx: Arc<Mutex<Sender<CommonMessage>>>, vad: &mut Cobra, sti: &mut Rhino,
-//                     recorder: &mut AudioRecorder, listening: &Cell<bool>, timeout: &Cell<i32>, halt: &Cell<bool>) {
-//     while !halt.get() {
-//         let record = recorder.listen();
-//         match record {
-//             Ok(pcm) => {
-//                 if listening.get() {
-//                     match auditio::process_sti(&pcm, sti) {
-//                         Ok(true) => {
-//                             listening.set(false);
-//                             if let Ok(inference) = auditio::get_inference(sti) {
-//                                 if inference.is_understood {
-//                                     dbg!(&inference.intent);
-//                                     let intent = IntentType::from_str(inference.intent.unwrap().as_str()).unwrap();
-//                                     match tx.lock().unwrap().send(CommonMessage::OrderDetected(intent)) {
-//                                         Ok(_) => {
-//                                         }
-//                                         Err(_) => {
-//                                             dbg!("recv true. send message failed.");
-//                                         }
-//                                     }
-//                                 } else {
-//                                     dbg!("cannot understood order.");
-//                                 }
-//                             }
-//                         },
-//                         Ok(false) => {
-//                             // let mut t = timeout.get();
-//                             // timeout.set(t + 1);
-//                             dbg!("not finished yet. hearing...");
-//                             // if t > 20 {
-//                             //     sti.
-//                             //     timeout.set(0);
-//                             //     listening.set(false);
-//                             // }
-//                         },
-//                         Err(_) => {}
-//                     }
-//                 } else {
-//                     match auditio::is_human_voice(&pcm, vad) {
-//                         Ok(detected) => {
-//                             if detected {
-//                                 auditio::process_sti(&pcm, sti).expect("failed to process sti!");
-//                                 listening.set(true);
-//                                 match tx.lock().unwrap().send(CommonMessage::HumanDetected) {
-//                                     Ok(_) => {
-//                                     }
-//                                     Err(_) => {
-//                                         dbg!("recv true. send message failed.");
-//                                     }
-//                                 }
-//                             }
-//                         }
-//                         Err(_) => {}
-//                     }
-//
-//                 }
-//
-//             },
-//             _ => {}
-//         }
-//         tokio::time::sleep(Duration::from_micros(1));
-//     }
-// }
-//
-//  fn audio_message(rx: Arc<Mutex<Receiver<CommonMessage>>>) {
-//
-// }
-
