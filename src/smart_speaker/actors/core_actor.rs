@@ -108,6 +108,7 @@ impl CoreActorManager {
                 );
                 thread::spawn(move || {
                     wake_word_actor.run();
+                    drop(wake_word_actor);
                 });
             },
             SmartSpeakerActors::SpeechToIntentActor => {
@@ -119,6 +120,7 @@ impl CoreActorManager {
                 );
                 thread::spawn(move || {
                     speech_to_intent_actor.run();
+                    drop(speech_to_intent_actor);
                 });
             },
             SmartSpeakerActors::StreamActor => {

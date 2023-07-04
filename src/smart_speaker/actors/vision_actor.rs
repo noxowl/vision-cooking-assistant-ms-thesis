@@ -24,20 +24,25 @@ impl VisionActor {
             debug,
             receiver,
             sender,
-            previous_frames: BoundedVecDeque::new(180),
-            previous_gaze_info: BoundedVecDeque::new(180),
+            previous_frames: BoundedVecDeque::new(60),
+            previous_gaze_info: BoundedVecDeque::new(60),
         }
     }
 
     pub(crate) fn run(&mut self) {
         println!("VisionActor started");
         while self.alive {
-            if let Ok(message) = self.receiver.try_recv() {
-                self.handle_message(message);
-            }
             if self.alive {
                 self.request_camera_frame();
                 self.request_gaze_info();
+            }
+            let mut pending = true;
+            while pending {
+                if let Ok(message) = self.receiver.try_recv() {
+                    self.handle_message(message);
+                } else {
+                    pending = false;
+                }
             }
             thread::sleep(Duration::from_millis(33));
         }
@@ -55,7 +60,7 @@ impl VisionActor {
                 self.handle_frame_data_bytes(frame_data_bytes, height);
             },
             SmartSpeakerMessage::RequestGazeInfo(RequestGazeInfo { send_from: _, send_to: _, gaze_info }) => {
-                // self.handle_gaze_info(gaze_info);
+                self.handle_gaze_info(gaze_info);
             },
             SmartSpeakerMessage::RequestAttention(_) => {
                 self.handle_attention();
@@ -67,16 +72,16 @@ impl VisionActor {
     fn handle_frame_data_bytes(&mut self, frame_data_bytes: Vec<u8>, height: i32) {
         match vision_controller::data_bytes_to_mat(frame_data_bytes, height) {
             Ok(frame) => {
-                self.previous_frames.push_back(frame);
+                // self.previous_frames.push_back(frame);
             }
             Err(_) => {}
         };
     }
 
     fn handle_gaze_info(&mut self, (x, y): (f32, f32)) {
-        self.previous_gaze_info.push_back((x, y));
+        // self.previous_gaze_info.push_back((x, y));
         if self.debug {
-            println!("Gaze info: ({}, {})", x, y);
+            // println!("Gaze info: ({}, {})", x, y);
         }
     }
 
@@ -89,6 +94,7 @@ impl VisionActor {
     }
 
     fn handle_attention(&self) {
+        let _ = "";
         // let capture = Capture::new(self.previous_frames.clone());
         // let gaze_info = vision_controller::get_gaze_info(capture);
         // camera_frame_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerActors::AudioActor, vec![], 0);

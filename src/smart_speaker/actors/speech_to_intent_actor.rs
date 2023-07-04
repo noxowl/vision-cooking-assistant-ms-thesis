@@ -49,8 +49,8 @@ impl SpeechToIntentActor {
              },
              SmartSpeakerMessage::RequestAudioStream(RequestAudioStream { send_from: _, send_to: _, stream }) => {
                  if self.stream_before != stream {
-                     self.stream_before = stream.clone();
-                     self.listen(stream);
+                     self.listen(&stream);
+                     self.stream_before = stream;
                  }
              },
              _ => {
@@ -59,7 +59,7 @@ impl SpeechToIntentActor {
          }
     }
 
-    fn listen(&mut self, stream: Vec<i16>) {
+    fn listen(&mut self, stream: &Vec<i16>) {
         if let Ok(finalized) = mic_controller::speech_to_intent_feed(&mut self.app, &stream) {
             if finalized {
                 if let Ok(inference) = self.app.get_inference() {

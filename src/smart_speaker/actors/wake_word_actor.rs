@@ -49,8 +49,8 @@ impl WakeWordActor {
             },
             SmartSpeakerMessage::RequestAudioStream(RequestAudioStream { send_from: _, send_to: _, stream }) => {
                 if self.stream_before != stream {
-                    self.stream_before = stream.clone();
-                    self.detect_wake_word(stream);
+                    self.detect_wake_word(&stream);
+                    self.stream_before = stream;
                 }
             },
             _ => {
@@ -59,8 +59,8 @@ impl WakeWordActor {
         }
     }
 
-    fn detect_wake_word(&mut self, stream: Vec<i16>) {
-        let result = self.core.detect(&stream);
+    fn detect_wake_word(&mut self, stream: &Vec<i16>) {
+        let result = self.core.detect(stream);
         match result {
             Ok(result) => {
                 if result {
