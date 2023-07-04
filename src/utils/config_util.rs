@@ -48,8 +48,11 @@ impl Cli {
                 "--vision" => {
                     config.vision = true;
                 }
-                "--stream-endpoint" => {
-                    config.stream_endpoint = self.args.get(i + 1).ok_or(anyhow!("no argument found for option")).unwrap().clone();
+                "--zmq-in-endpoint" => {
+                    config.zmq_in_endpoint = self.args.get(i + 1).ok_or(anyhow!("no argument found for option")).unwrap().clone();
+                }
+                "--stream-out-endpoint" => {
+                    config.stream_out_endpoint = self.args.get(i + 1).ok_or(anyhow!("no argument found for option")).unwrap().clone();
                 }
                 _ => {}
             }
@@ -66,7 +69,8 @@ pub(crate) struct Config {
     pub vision_type: VisionType,
     pub vision: bool,
     pub debug: bool,
-    pub stream_endpoint: String,
+    pub zmq_in_endpoint: String,
+    pub stream_out_endpoint: String,
 }
 
 impl Config {
@@ -78,7 +82,8 @@ impl Config {
             vision_type: VisionType::None,
             vision: false,
             debug: false,
-            stream_endpoint: "".to_string(),
+            zmq_in_endpoint: "".to_string(),
+            stream_out_endpoint: "".to_string(),
         }
     }
 }

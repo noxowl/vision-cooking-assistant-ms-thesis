@@ -9,8 +9,6 @@ use crate::utils::vision_util::VisionType;
 /// A capture source is a source of frames, such as a camera or a pupil remote.
 pub(crate) struct Capture {
     pub source: Option<Box<(dyn CaptureSource + Send + 'static)>>,
-    // pub frame: Option<Mat>,
-    // pub previous_frames: BoundedVecDeque<Mat>,
 }
 
 impl Capture {
@@ -18,8 +16,6 @@ impl Capture {
     pub fn new() -> Self {
         Self {
             source: None,
-            // frame: None,
-            // previous_frames: BoundedVecDeque::new(600),
         }
     }
 

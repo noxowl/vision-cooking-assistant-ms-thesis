@@ -6,6 +6,7 @@ use opencv::core::Mat;
 use crate::smart_speaker::controllers::camera_controller;
 use crate::smart_speaker::models::vision_model::Capture;
 use crate::utils::message_util::{camera_frame_message, RequestCameraFrame, SmartSpeakerActors, SmartSpeakerMessage};
+use crate::utils::vision_util::VisionType;
 
 pub(crate) struct CameraActor {
     alive: bool,
@@ -46,7 +47,14 @@ impl CameraActor {
                     }
                 }
             }
-            thread::sleep(Duration::from_millis(33));
+            if let Some(vision_type) = self.core.get_source_type() {
+                if vision_type == VisionType::Pupil {
+                    // The pupil world camera frame rate is 60fps.
+                    thread::sleep(Duration::from_millis(14));
+                }
+            } else {
+                thread::sleep(Duration::from_millis(33));
+            }
         }
     }
 

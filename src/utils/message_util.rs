@@ -4,11 +4,13 @@ use std::sync::mpsc;
 pub(crate) enum SmartSpeakerActors {
     CoreActor,
     CameraActor,
+    VisionActor,
     GazeActor,
     AudioActor,
     WakeWordActor,
     SpeechToIntentActor,
     MachineSpeechActor,
+    StreamActor,
     QueryActor,
 }
 
@@ -24,6 +26,14 @@ pub(crate) enum SmartSpeakerMessage {
     RequestGazeInfo(RequestGazeInfo),
     RequestAttention(RequestAttention),
     RequestQuery(QueryMessage),
+    RequestActorGenerate(RequestActorGenerate),
+    ForceActivate(ForceActivate),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct ForceActivate {
+    pub send_from: SmartSpeakerActors,
+    pub send_to: SmartSpeakerActors,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -66,7 +76,7 @@ pub(crate) struct RequestCameraFrame {
 pub(crate) struct RequestGazeInfo {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
-    pub gaze_info: Vec<f32>
+    pub gaze_info: (f32, f32)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -81,6 +91,12 @@ pub(crate) struct QueryMessage {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
     pub message: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct RequestActorGenerate {
+    pub send_from: SmartSpeakerActors,
+    pub request: SmartSpeakerActors
 }
 
 pub(crate) fn audio_stream_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
@@ -117,10 +133,24 @@ pub(crate) fn camera_frame_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
     }
 }
 
+pub(crate) fn generate_actor_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
+                                     send_from: SmartSpeakerActors,
+                                     request: SmartSpeakerActors) {
+    match sender.send(SmartSpeakerMessage::RequestActorGenerate(RequestActorGenerate {
+        send_from,
+        request,
+    })) {
+        Ok(_) => {}
+        Err(e) => {
+            println!("Error: {}", e);
+        }
+    }
+}
+
 pub(crate) fn gaze_info_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
                                 send_from: SmartSpeakerActors,
                                 send_to: SmartSpeakerActors,
-                                gaze_info: Vec<f32>) {
+                                gaze_info: (f32, f32)) {
     match sender.send(SmartSpeakerMessage::RequestGazeInfo(RequestGazeInfo {
         send_from,
         send_to,

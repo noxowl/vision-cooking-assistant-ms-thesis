@@ -1,10 +1,13 @@
 mod vision_actor;
-pub mod vision_actor_tests;
+mod vision_actor_tests;
 mod audio_actor;
-pub mod audio_actor_tests;
+mod audio_actor_tests;
 pub mod core_actor;
-pub mod core_actor_tests;
+mod core_actor_tests;
 mod camera_actor;
 mod camera_actor_tests;
 mod wake_word_actor;
 mod speech_to_intent_actor;
+mod stream_actor;
+mod query_actor;
+mod gaze_actor;

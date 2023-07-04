@@ -2,6 +2,11 @@ use std::env;
 use anyhow::Result;
 use crate::utils::config_util::{Cli, Command};
 extern crate opencv;
+extern crate rmp;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+extern crate rmp_serde as rmps;
 
 mod core;
 mod core_tests;

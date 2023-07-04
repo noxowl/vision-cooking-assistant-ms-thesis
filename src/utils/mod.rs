@@ -10,3 +10,6 @@ pub mod marker_util;
 // pub mod marker_util_tests;
 pub mod vision_util;
 // pub mod vision_util_tests;
+pub mod query_util;
+pub mod gaze_util;
+pub mod debug_util;

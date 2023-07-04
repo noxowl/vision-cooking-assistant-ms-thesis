@@ -1,8 +1,10 @@
-pub mod vision_controller;
-pub mod vision_controller_tests;
-pub mod camera_controller;
-pub mod camera_controller_tests;
-pub mod mic_controller;
-pub mod mic_controller_tests;
-pub mod gaze_controller;
+pub(crate) mod vision_controller;
+pub(crate) mod vision_controller_tests;
+pub(crate) mod camera_controller;
+pub(crate) mod camera_controller_tests;
+pub(crate) mod mic_controller;
+pub(crate) mod mic_controller_tests;
+pub(crate) mod gaze_controller;
 // pub mod gaze_controller_tests;
+pub(crate) mod stream_controller;
+pub(crate) mod debug_controller;

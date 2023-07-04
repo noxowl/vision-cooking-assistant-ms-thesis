@@ -28,31 +28,31 @@ impl FromStr for VisionType {
     }
 }
 
-pub(crate) fn generate_vision_capture_source(source_type: &VisionType) -> Result<Arc<RwLock<dyn CaptureSource + 'static>>> {
-    match source_type {
-        VisionType::Pupil => {
-            let source = Arc::new(RwLock::new(
-                PupilCaptureSource::new(
-                    Pupil::new(PupilRemote {}))));
-            Ok(source)
-        }
-        VisionType::BuiltInCamera => {
-            let source = Arc::new(RwLock::new(
-                CameraCaptureSource::new(
-                    Camera::new()?)));
-            Ok(source)
-        }
-        _ => {
-            Err(anyhow!("invalid vision type"))
-        }
-    }
-}
+// pub(crate) fn generate_vision_capture_source(source_type: &VisionType) -> Result<Arc<RwLock<dyn CaptureSource + 'static>>> {
+//     match source_type {
+//         VisionType::Pupil => {
+//             let source = Arc::new(RwLock::new(
+//                 PupilCaptureSource::new(
+//                     Pupil::new(PupilRemote {}))));
+//             Ok(source)
+//         }
+//         VisionType::BuiltInCamera => {
+//             let source = Arc::new(RwLock::new(
+//                 CameraCaptureSource::new(
+//                     Camera::new()?)));
+//             Ok(source)
+//         }
+//         _ => {
+//             Err(anyhow!("invalid vision type"))
+//         }
+//     }
+// }
 
-pub(crate) fn set_pupil_capture(capture: &mut Capture) -> Result<()> {
+pub(crate) fn set_pupil_capture(capture: &mut Capture, zmq_endpoint: String) -> Result<()> {
     capture.source = Some(Box::new(
         PupilCaptureSource::new(
-            Pupil::new(PupilRemote {}))));
-    Err(anyhow!("not implemented"))
+            Pupil::new(PupilRemote::new(zmq_endpoint, "frame")))));
+    Ok(())
 }
 
 pub(crate) fn set_camera_capture(capture: &mut Capture) -> Result<()> {

@@ -1,42 +1,44 @@
 use anyhow::{anyhow, Result};
-use opencv::{objdetect, imgproc};
+use opencv::{objdetect, imgproc, imgcodecs};
 use opencv::prelude::*;
-use opencv::core::{Point, Point2f, Scalar, Vector};
+use opencv::core::{Point, Point2f, Scalar, Vector, Size};
 use opencv::types::{VectorOfi32, VectorOfPoint2f, VectorOfVectorOfPoint2f};
 
-// pub(crate) fn vision_loop(capture: &mut Capture) -> Result<()> {
-//     loop {
-//         match capture.source.as_mut() {
-//             Some(source) => {
-//                 let frame = source.get_frame()?;
-//                 // let (corners, ids) = find_aruco(&frame)?;
-//                 match capture.get_source_type() {
-//                     None => {}
-//                     Some(source_type) => {
-//                         match source_type {
-//                             VisionType::BuiltInCamera => {
-//                                 // let frame = draw_aruco(&frame, &corners, &ids)?;
-//                                 capture.update(frame);
-//                             }
-//                             VisionType::Pupil => {
-//                                 // let frame = draw_aruco(&frame, &corners, &ids)?;
-//                                 capture.update(frame);
-//                             }
-//                             _ => {}
-//                         }
-//                     }
-//                 }
-//                 // let gaze = find_gaze(&frame)?;
-//                 // let nearest_aruco = find_nearest_aruco(&gaze, &corners, &ids)?;
-//                 // println!("nearest_aruco: {:?}", nearest_aruco);
-//             }
-//             None => {
-//                 println!("no source");
-//             }
-//         }
-//     }
-// }
 
+pub(crate) fn data_bytes_to_mat(bytes: Vec<u8>, height: i32) -> Result<Mat> {
+    match Mat::from_slice(&bytes) {
+        Ok(mat) => {
+            match mat.reshape(3, height) {
+                Ok(mat) => {
+                    Ok(mat)
+                }
+                Err(_) => {
+                    Err(anyhow!("failed to reshape Mat"))
+                }
+            }
+        }
+        Err(_) => {
+            Err(anyhow!("failed to convert bytes to Mat"))
+        }
+    }
+}
+
+pub(crate) fn resize_frame(frame: Mat) -> Mat {
+    let mut resized_frame = Mat::default();
+    imgproc::resize(
+        &frame,
+        &mut resized_frame,
+        Size {
+            width: frame.cols() / 2,
+            height: frame.rows() / 2,
+        },
+        0.0,
+        0.0,
+        imgproc::INTER_LINEAR,
+    )
+    .unwrap();
+    resized_frame
+}
 
 pub(crate) struct DetectedMarker {
     pub corner: VectorOfPoint2f,
