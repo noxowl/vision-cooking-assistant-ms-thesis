@@ -48,7 +48,7 @@ impl AudioActor {
         let _ = self.core.stop();
     }
 
-     fn handle_message(&mut self, message: SmartSpeakerMessage) {
+    fn handle_message(&mut self, message: SmartSpeakerMessage) {
         match message {
             SmartSpeakerMessage::RequestShutdown(RequestShutdown {}) => {
                 self.alive = false;
