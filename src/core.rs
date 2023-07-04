@@ -50,7 +50,10 @@ impl VisionSmartSpeaker {
 
 impl SmartSpeaker for VisionSmartSpeaker {
      fn start(&mut self) {
-        println!("VisionSmartSpeaker started");
+         println!("VisionSmartSpeaker started");
+         let (tx, rx) = mpsc::channel();
+         let mut core_actor = CoreActor::new(self.config.clone(), tx, rx);
+         core_actor.run();
     }
 
      fn stop(&mut self) {
