@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Result};
-use opencv::{objdetect, imgproc, imgcodecs};
+use opencv::{objdetect, imgproc};
 use opencv::prelude::*;
-use opencv::core::{Point, Point2f, Scalar, Vector, Size};
-use opencv::types::{VectorOfi32, VectorOfPoint2f, VectorOfVectorOfPoint2f};
+use opencv::core::{Point, Scalar, Vector, Size};
+use opencv::types::{VectorOfi32, VectorOfVectorOfPoint2f};
 
 
 pub(crate) fn data_bytes_to_mat(bytes: Vec<u8>, height: i32) -> Result<Mat> {
@@ -40,35 +40,7 @@ pub(crate) fn resize_frame(frame: Mat) -> Mat {
     resized_frame
 }
 
-pub(crate) struct DetectedMarker {
-    pub corner: VectorOfPoint2f,
-    pub id: i32,
-    pub centroid: Point2f,
-}
 
-impl DetectedMarker {
-    fn new(corner: Vector<Point2f>, id: i32, centroid: Point2f) -> Self {
-        Self {
-            corner,
-            id,
-            centroid,
-        }
-    }
-
-    fn update(mut self, corner: Vector<Point2f>, id: i32, centroid: Point2f) {
-        self.corner = corner;
-        self.id = id;
-        self.centroid = centroid;
-    }
-
-    fn default() -> Self {
-        Self {
-            corner: Default::default(),
-            id: 0,
-            centroid: Default::default(),
-        }
-    }
-}
 
 // pub  fn find_nearest_aruco(gaze: &(f32, f32), corners: &VectorOfVectorOfPoint2f, ids: &Vector<i32>) -> Result<DetectedMarker> {
 //     let mut nearest_index = 0;
@@ -95,7 +67,7 @@ impl DetectedMarker {
 //     ))
 // }
 
-pub(crate) fn detect_aruco(frame: &Mat, max_markers: usize) -> Result<(VectorOfVectorOfPoint2f, Vector<i32>)> {
+pub(crate) fn detect_aruco(frame: &Mat) -> Result<(VectorOfVectorOfPoint2f, Vector<i32>)> {
     let parameters = opencv::objdetect::DetectorParameters::default()?;
     let dictionary = opencv::objdetect::get_predefined_dictionary(objdetect::PredefinedDictionaryType::DICT_4X4_50)?;
     let mut corners: VectorOfVectorOfPoint2f = Default::default();
@@ -105,20 +77,4 @@ pub(crate) fn detect_aruco(frame: &Mat, max_markers: usize) -> Result<(VectorOfV
                                                  objdetect::RefineParameters::new(10., 3., true).unwrap())?;
     detector.detect_markers(frame, &mut corners, &mut ids, &mut rejected).expect("TODO: panic message");
     Ok((corners, ids))
-}
-
-pub(crate) fn debug_draw_aruco(frame: &mut Mat, corners: &VectorOfVectorOfPoint2f, ids: &VectorOfi32) {
-    objdetect::draw_detected_markers(frame, corners, ids, Scalar::new(255., 0., 0., 255.)).unwrap();
-}
-
-pub(crate) fn debug_put_text(frame: &mut Mat, text: &str, pt: [i32; 2]) {
-    imgproc::put_text(frame, text, Point::new(pt[0], pt[1]), imgproc::FONT_ITALIC, 0.5, Scalar::new(0., 255., 0., 255.),
-                      2, 0, false).unwrap();
-}
-
-pub(crate) fn debug_draw_marker(frame: &mut Mat, pt: [i32; 2], colour: [f64; 3]) {
-    imgproc::draw_marker(frame, Point::new(pt[0], pt[1]),
-                         Scalar::new(colour[0],
-                                     colour[1],
-                                     colour[2], 255.), 0, 0, 3, 0).unwrap();
 }

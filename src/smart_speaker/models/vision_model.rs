@@ -1,5 +1,3 @@
-use std::any::{Any, TypeId};
-use ::bounded_vec_deque::BoundedVecDeque;
 use opencv::core::Mat;
 use anyhow::Result;
 use crate::utils::camera_util::Camera;
@@ -95,7 +93,33 @@ impl CaptureSource for CameraCaptureSource {
     }
 }
 
-/// A marker is a point of interest in the frame.
-pub(crate) struct Marker {
 
-}
+// pub(crate) struct DetectedMarker {
+//     pub corner: VectorOfPoint2f,
+//     pub id: i32,
+//     pub centroid: Point2f,
+// }
+//
+// impl DetectedMarker {
+//     fn new(corner: Vector<Point2f>, id: i32, centroid: Point2f) -> Self {
+//         Self {
+//             corner,
+//             id,
+//             centroid,
+//         }
+//     }
+//
+//     fn update(mut self, corner: Vector<Point2f>, id: i32, centroid: Point2f) {
+//         self.corner = corner;
+//         self.id = id;
+//         self.centroid = centroid;
+//     }
+//
+//     fn default() -> Self {
+//         Self {
+//             corner: Default::default(),
+//             id: 0,
+//             centroid: Default::default(),
+//         }
+//     }
+// }

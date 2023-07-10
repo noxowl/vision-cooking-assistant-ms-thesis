@@ -1,7 +1,6 @@
 use std::str::FromStr;
-use std::sync::{Arc, RwLock};
 use anyhow::{anyhow, Result};
-use crate::smart_speaker::models::vision_model::{CameraCaptureSource, Capture, CaptureSource, PupilCaptureSource};
+use crate::smart_speaker::models::vision_model::{CameraCaptureSource, Capture, PupilCaptureSource};
 use crate::utils::camera_util::Camera;
 use crate::utils::pupil_util::{Pupil, PupilRemote};
 

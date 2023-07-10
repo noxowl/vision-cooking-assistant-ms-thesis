@@ -1,4 +1,4 @@
-use std::io::{Cursor, Read};
+use std::io::{Cursor};
 use opencv::prelude::*;
 use anyhow::{anyhow, Result};
 use zmq;

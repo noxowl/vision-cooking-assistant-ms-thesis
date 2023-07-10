@@ -1,8 +1,8 @@
-use opencv::prelude::*;
+// use opencv::prelude::*;
 // use opencv::{objdetect, imgproc, imgcodecs};
-use opencv::core::{CV_8UC1, hconcat2, Mat, Rect, Scalar, vconcat};
+// use opencv::core::{CV_8UC1, hconcat2, Mat, Rect, Scalar, vconcat};
 // use opencv::types::{VectorOfi32, VectorOfMat};
-use anyhow::Result;
+// use anyhow::Result;
 
 // pub fn generate_aruco(marker_amount: u32) -> Result<Vec<u32>> {
 //     let mut index_generated = vec![];
@@ -49,8 +49,8 @@ use anyhow::Result;
 //     Ok(index_generated)
 // }
 
-fn generate_padding_img(mat: &Mat) -> Result<Mat> {
-    Ok(Mat::new_rows_cols_with_default(
-        mat.rows(), mat.cols(),
-        CV_8UC1, Scalar::new(255., 255., 255., 255.,))?)
-}
+// fn generate_padding_img(mat: &Mat) -> Result<Mat> {
+//     Ok(Mat::new_rows_cols_with_default(
+//         mat.rows(), mat.cols(),
+//         CV_8UC1, Scalar::new(255., 255., 255., 255.,))?)
+// }

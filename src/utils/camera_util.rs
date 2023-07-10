@@ -8,9 +8,8 @@ pub(crate) struct Camera {
 }
 
 impl Camera {
-    #[allow(unused_mut)]
     pub fn new() -> Result<Self> {
-        let mut video_capture = VideoCapture::new(0, CAP_ANY)?;
+        let video_capture = VideoCapture::new(0, CAP_ANY)?;
         Ok(Self { video_capture })
     }
 

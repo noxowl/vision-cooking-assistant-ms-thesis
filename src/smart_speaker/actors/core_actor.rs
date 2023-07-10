@@ -14,7 +14,7 @@ use crate::smart_speaker::models::gaze_model::Gaze;
 use crate::smart_speaker::models::mic_model::{AudioListener, SpeechToIntent, WakeWordDetector};
 use crate::smart_speaker::models::vision_model::Capture;
 use crate::utils::config_util::Config;
-use crate::utils::message_util::{AttentionFinished, QueryMessage, ReportTerminated, RequestAttention, RequestAudioStream, RequestCameraFrame, RequestGazeInfo, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
+use crate::utils::message_util::{AttentionFinished, QueryMessage, ReportTerminated, RequestAttention, RequestAudioStream, RequestCameraFrame, RequestGazeInfo, RequestMarkerInfo, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
 use crate::utils::vision_util;
 use crate::utils::vision_util::VisionType;
 
@@ -83,14 +83,13 @@ impl CoreActorManager {
                 let mut vision_actor = VisionActor::new(
                     rx,
                     sender.clone(),
-                    config.debug.clone(),
                 );
                 thread::spawn(move || {
                     vision_actor.run();
                 });
             },
             SmartSpeakerActors::GazeActor => {
-                let mut gaze = Gaze::new(config.vision_type.clone(), 0.5, 0.5, config.zmq_in_endpoint.clone()).unwrap();
+                let gaze = Gaze::new(config.vision_type.clone(), 0.5, 0.5, config.zmq_in_endpoint.clone()).unwrap();
                 let mut gaze_actor = GazeActor::new(
                     gaze,
                     rx,
@@ -212,6 +211,17 @@ impl CoreActorMessageHandler {
                 }
                 if let Some(sender) = senders.get(&send_to) {
                     sender.send(SmartSpeakerMessage::RequestGazeInfo(RequestGazeInfo { send_from, send_to, gaze_info })).expect("TODO: panic message");
+                }
+                CoreActorState::WaitForNextMessage {}
+            },
+            SmartSpeakerMessage::RequestMarkerInfo(RequestMarkerInfo { send_from, send_to, marker_info }) => {
+                if self.debug.activated && send_from == SmartSpeakerActors::VisionActor {
+                    self.debug.update_marker_info(&marker_info);
+                }
+                if send_to != SmartSpeakerActors::CoreActor {
+                    if let Some(sender) = senders.get(&send_to) {
+                        sender.send(SmartSpeakerMessage::RequestMarkerInfo(RequestMarkerInfo { send_from, send_to, marker_info })).expect("TODO: panic message");
+                    }
                 }
                 CoreActorState::WaitForNextMessage {}
             },

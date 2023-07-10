@@ -1,4 +1,5 @@
 use std::sync::mpsc;
+use opencv::{core::Vector, types::VectorOfVectorOfPoint2f};
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
 pub(crate) enum SmartSpeakerActors {
@@ -25,6 +26,7 @@ pub(crate) enum SmartSpeakerMessage {
     RequestCameraFrame(RequestCameraFrame),
     RequestGazeInfo(RequestGazeInfo),
     RequestAttention(RequestAttention),
+    RequestMarkerInfo(RequestMarkerInfo),
     RequestQuery(QueryMessage),
     RequestActorGenerate(RequestActorGenerate),
     ForceActivate(ForceActivate),
@@ -77,6 +79,13 @@ pub(crate) struct RequestGazeInfo {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
     pub gaze_info: (f32, f32)
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct RequestMarkerInfo {
+    pub send_from: SmartSpeakerActors,
+    pub send_to: SmartSpeakerActors,
+    pub marker_info: (Vec<Vec<(f32, f32)>>, Vec<i32>)
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -155,6 +164,27 @@ pub(crate) fn gaze_info_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
         send_from,
         send_to,
         gaze_info,
+    })) {
+        Ok(_) => {}
+        Err(e) => {
+            println!("Error: {}", e);
+        }
+    }
+}
+
+pub(crate) fn marker_info_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
+                                  send_from: SmartSpeakerActors,
+                                  send_to: SmartSpeakerActors,
+                                  marker_info: (VectorOfVectorOfPoint2f, Vector<i32>)) {
+    match sender.send(SmartSpeakerMessage::RequestMarkerInfo(RequestMarkerInfo {
+        send_from,
+        send_to,
+        marker_info: (
+            marker_info.0.to_vec().into_iter()
+                .map(|x| x.to_vec().into_iter()
+                    .map(|point| (point.x, point.y)).collect()
+                ).collect(),
+            marker_info.1.to_vec()),
     })) {
         Ok(_) => {}
         Err(e) => {

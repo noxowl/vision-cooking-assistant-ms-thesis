@@ -1,5 +1,5 @@
 use pv_recorder::{Recorder, RecorderBuilder};
-use cobra::{Cobra};
+// use cobra::{Cobra};
 use rhino::{Rhino, RhinoBuilder};
 use porcupine::{Porcupine, PorcupineBuilder, BuiltinKeywords};
 use cheetah::{Cheetah, CheetahBuilder};
@@ -68,24 +68,24 @@ impl WakeWordDetector {
     }
 }
 
-pub(crate) struct VoiceActivityDetector {
-    pub app: Cobra,
-}
-
-impl VoiceActivityDetector {
-    pub fn new(api_key: &String) -> Self {
-        Self {
-            app: Cobra::new(api_key.clone()).unwrap(),
-        }
-    }
-
-    pub fn detect(&mut self, pcm: &Vec<i16>) -> Result<f32> {
-        match self.app.process(pcm) {
-            Ok(probability) => Ok(probability),
-            Err(_) => Err(anyhow!("failed to process audio frame"))
-        }
-    }
-}
+// pub(crate) struct VoiceActivityDetector {
+//     pub app: Cobra,
+// }
+//
+// impl VoiceActivityDetector {
+//     pub fn new(api_key: &String) -> Self {
+//         Self {
+//             app: Cobra::new(api_key.clone()).unwrap(),
+//         }
+//     }
+//
+//     pub fn detect(&mut self, pcm: &Vec<i16>) -> Result<f32> {
+//         match self.app.process(pcm) {
+//             Ok(probability) => Ok(probability),
+//             Err(_) => Err(anyhow!("failed to process audio frame"))
+//         }
+//     }
+// }
 
 pub(crate) struct SpeechToIntent {
     pub app: Rhino,

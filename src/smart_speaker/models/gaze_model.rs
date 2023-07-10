@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::Result;
 use crate::utils::pupil_util::{Pupil, PupilRemote};
 use crate::utils::vision_util::VisionType;
 
