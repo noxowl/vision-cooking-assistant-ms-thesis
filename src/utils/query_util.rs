@@ -34,4 +34,10 @@ impl QueryManager {
         stream.set_nodelay(true).unwrap();
     }
 
+    pub(crate) fn query_cooking_ingredient(&self) {
+        let query_server_address = self.query_server_address.clone();
+        let stream = TcpStream::connect(query_server_address).unwrap();
+        stream.set_nodelay(true).unwrap();
+    }
+
 }

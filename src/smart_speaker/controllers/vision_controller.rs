@@ -40,7 +40,8 @@ pub(crate) fn resize_frame(frame: Mat) -> Mat {
     resized_frame
 }
 
-
+/// measure object size by aruco marker
+pub(crate) fn measure_object_size_by_aruco() {}
 
 // pub  fn find_nearest_aruco(gaze: &(f32, f32), corners: &VectorOfVectorOfPoint2f, ids: &Vector<i32>) -> Result<DetectedMarker> {
 //     let mut nearest_index = 0;

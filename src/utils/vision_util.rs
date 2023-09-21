@@ -1,5 +1,9 @@
 use std::str::FromStr;
 use anyhow::{anyhow, Result};
+use opencv::core::{Point2f, in_range, Size, Point, bitwise_and, BORDER_DEFAULT, Vector};
+use opencv::imgproc::{self, arc_length, cvt_color};
+use opencv::prelude::*;
+use opencv::types::VectorOfPoint2f;
 use crate::smart_speaker::models::vision_model::{CameraCaptureSource, Capture, PupilCaptureSource};
 use crate::utils::camera_util::Camera;
 use crate::utils::pupil_util::{Pupil, PupilRemote};
@@ -76,6 +80,67 @@ pub(crate) fn midpoint(px_x: &f32, px_y: &f32, py_x: &f32, py_y: &f32) -> (f32, 
 
 pub(crate) fn distance(px_x: &f32, px_y: &f32, py_x: &f32, py_y: &f32) -> f32 {
     ((py_x - px_x).abs().powi(2) + (py_y - px_y).abs().powi(2)).sqrt()
+}
+
+pub(crate) fn aruco_perimeter_ratio(corners: VectorOfPoint2f) -> f64 {
+    let aruco_perimeter = arc_length(&corners, true).unwrap();
+    return aruco_perimeter / 20.
+}
+
+/// get actual size of object by aruco marker
+pub(crate) fn pixel_to_metric(target: f64, ratio: f64) -> f64 {
+    target / ratio
+}
+
+pub(crate) fn mask_object(frame: &Mat, target: DetectableObject) -> Result<Mat> {
+    let mut hsv = Mat::default();
+    let mut mask = Mat::default();
+    let mut dst = Mat::default();
+    cvt_color(&frame, &mut hsv, imgproc::COLOR_BGR2HSV, 0).unwrap();
+    match target {
+        DetectableObject::Carrot => {
+            in_range(
+                &hsv,
+                &Vector::from_slice(&[35., 155., 255.]),
+                &Vector::from_slice(&[26., 255., 255.]),
+                &mut mask,
+            )?;
+        },
+        DetectableObject::HumanSkin => {
+            in_range(
+                &hsv,
+                &Vector::from_slice(&[0., 48., 80.]),
+                &Vector::from_slice(&[20., 255., 255.]),
+                &mut mask,
+            )?;
+        }
+    }
+    let kernel = imgproc::get_structuring_element(
+        imgproc::MORPH_ELLIPSE,
+        Size::new(3, 3), Default::default()).unwrap();
+    imgproc::erode(
+        &mask,
+        &mut dst,
+        &kernel,
+        Point::new(-1, -1),
+        2, 0, Default::default()).unwrap();
+    imgproc::dilate(
+        &dst,
+        &mut mask,
+        &kernel,
+        Point::new(-1, -1),
+        2, 0, Default::default()).unwrap();
+
+    imgproc::gaussian_blur(&mask, &mut dst, Size::new(3, 3), 0.,0., BORDER_DEFAULT).unwrap();
+    bitwise_and(frame, frame, &mut mask, &dst).unwrap();
+    imgproc::cvt_color(&mask, &mut dst, imgproc::COLOR_HSV2BGR, 0).unwrap();
+    imgproc::threshold(&dst, &mut mask, 60., 255., imgproc::THRESH_BINARY).unwrap();
+    Ok(mask)
+}
+
+pub(crate) enum DetectableObject {
+    Carrot,
+    HumanSkin,
 }
 
 // pub  fn draw_debug_frame(frame: Arc<Mutex<Mat>>, gaze: Arc<Mutex<Point2f>>, halt: &Cell<bool>) {

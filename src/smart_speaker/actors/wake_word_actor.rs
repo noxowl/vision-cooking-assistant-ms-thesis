@@ -4,6 +4,7 @@ use std::time::Duration;
 use crate::smart_speaker::models::mic_model::WakeWordDetector;
 use crate::utils::message_util;
 use crate::utils::message_util::{RequestAudioStream, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
+use crate::smart_speaker::models::core_model::SmartSpeakerState;
 
 pub(crate) struct WakeWordActor {
     alive: bool,
@@ -85,10 +86,12 @@ impl WakeWordActor {
     }
 
     fn request_attention(&mut self) {
-        message_util::attention_message(
+        message_util::state_update_message(
             &self.sender,
             SmartSpeakerActors::WakeWordActor,
-            SmartSpeakerActors::CoreActor)
+            SmartSpeakerActors::CoreActor,
+            SmartSpeakerState::Attention
+        )
     }
 
     fn terminate(&mut self) {

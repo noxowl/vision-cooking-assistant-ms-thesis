@@ -69,12 +69,12 @@ impl VisionActor {
             SmartSpeakerMessage::RequestGazeInfo(RequestGazeInfo { send_from: _, send_to: _, gaze_info }) => {
                 self.handle_gaze_info(gaze_info);
             },
-            SmartSpeakerMessage::RequestAttention(_) => {
+            SmartSpeakerMessage::RequestStateUpdate(_) => {
                 self.attention = true;
             },
-            SmartSpeakerMessage::AttentionFinished(_) => {
-                self.attention = false;
-            }
+            // SmartSpeakerMessage::AttentionFinished(_) => {
+            //     self.attention = false;
+            // }
             _ => {}
         }
     }
@@ -108,7 +108,7 @@ impl VisionActor {
         self.attention = true;
         // let capture = Capture::new(self.previous_frames.clone());
         // let gaze_info = vision_controller::get_gaze_info(capture);
-        // camera_frame_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerActors::AudioActor, vec![], 0);
+        // camera_frame_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerActors::ContextActor, vec![], 0);
     }
 }
 

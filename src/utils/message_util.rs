@@ -1,5 +1,7 @@
 use std::sync::mpsc;
 use opencv::{core::Vector, types::VectorOfVectorOfPoint2f};
+use crate::smart_speaker::models::core_model::SmartSpeakerState;
+use crate::smart_speaker::models::intent_model::{IntentAction, IntentSlot};
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
 pub(crate) enum SmartSpeakerActors {
@@ -13,19 +15,22 @@ pub(crate) enum SmartSpeakerActors {
     MachineSpeechActor,
     StreamActor,
     QueryActor,
+    ContextActor,
+    VoiceActivityDetectActor,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum SmartSpeakerMessage {
     StringMessage(StringMessage),
-    // WakeWordDetected(WakeWordDetected),
-    AttentionFinished(AttentionFinished),
+    // AttentionFinished(AttentionFinished),
+    IntentFinalized(IntentFinalized),
+    VisionFinalized(VisionFinalized),
     ReportTerminated(ReportTerminated),
     RequestShutdown(RequestShutdown),
     RequestAudioStream(RequestAudioStream),
     RequestCameraFrame(RequestCameraFrame),
     RequestGazeInfo(RequestGazeInfo),
-    RequestAttention(RequestAttention),
+    RequestStateUpdate(RequestStateUpdate),
     RequestMarkerInfo(RequestMarkerInfo),
     RequestQuery(QueryMessage),
     RequestActorGenerate(RequestActorGenerate),
@@ -39,16 +44,18 @@ pub(crate) struct ForceActivate {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) struct RequestAttention {
+pub(crate) struct RequestStateUpdate {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
+    pub state: SmartSpeakerState,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct AttentionFinished {
-    pub send_from: SmartSpeakerActors,
-    pub send_to: SmartSpeakerActors,
-}
+// #[derive(Debug, Clone, PartialEq)]
+// pub(crate) struct AttentionFinished {
+//     pub send_from: SmartSpeakerActors,
+//     pub send_to: SmartSpeakerActors,
+//     pub result: AttentionResult,
+// }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct ReportTerminated {
@@ -106,6 +113,70 @@ pub(crate) struct QueryMessage {
 pub(crate) struct RequestActorGenerate {
     pub send_from: SmartSpeakerActors,
     pub request: SmartSpeakerActors
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct IntentFinalized {
+    pub send_from: SmartSpeakerActors,
+    pub send_to: SmartSpeakerActors,
+    pub result: ProcessResult,
+    pub content: IntentContent,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct IntentContent {
+    pub intent: IntentAction,
+    pub entities: Vec<Box<dyn IntentSlot>>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct VisionFinalized {
+    pub send_from: SmartSpeakerActors,
+    pub send_to: SmartSpeakerActors,
+    pub result: ProcessResult,
+    pub content: VisionContent,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct VisionContent {
+    pub gaze_info: (f32, f32),
+    pub marker_info: (Vec<Vec<(f32, f32)>>, Vec<i32>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum ContentType {
+    None,
+    Intent,
+    Vision,
+}
+
+pub(crate) trait Content {
+    fn clone_box(&self) -> Box<dyn Content>;
+    fn as_any(&self) -> &dyn std::any::Any;
+}
+
+impl Content for IntentContent {
+    fn clone_box(&self) -> Box<dyn Content> {
+        Box::new(self.clone())
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+impl Content for VisionContent {
+    fn clone_box(&self) -> Box<dyn Content> {
+        Box::new(self.clone())
+    }
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum ProcessResult {
+    Success,
+    Failure,
 }
 
 pub(crate) fn audio_stream_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
@@ -193,12 +264,14 @@ pub(crate) fn marker_info_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
     }
 }
 
-pub(crate) fn attention_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
-                                send_from: SmartSpeakerActors,
-                                send_to: SmartSpeakerActors) {
-    match sender.send(SmartSpeakerMessage::RequestAttention(RequestAttention {
+pub(crate) fn state_update_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
+                                   send_from: SmartSpeakerActors,
+                                   send_to: SmartSpeakerActors,
+                                   state: SmartSpeakerState) {
+    match sender.send(SmartSpeakerMessage::RequestStateUpdate(RequestStateUpdate {
         send_from,
         send_to,
+        state
     })) {
         Ok(_) => {}
         Err(e) => {
@@ -207,12 +280,31 @@ pub(crate) fn attention_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
     }
 }
 
-pub(crate) fn attention_finished_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
+// pub(crate) fn attention_finished_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
+//                                          send_from: SmartSpeakerActors,
+//                                          send_to: SmartSpeakerActors,
+//                                          result: AttentionResult) {
+//     match sender.send(SmartSpeakerMessage::AttentionFinished(AttentionFinished {
+//         send_from,
+//         send_to,
+//         result,
+//     })) {
+//         Ok(_) => {}
+//         Err(e) => {
+//             println!("Error: {}", e);
+//         }
+//     }
+// }
+
+pub(crate) fn intent_finalized_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
                                          send_from: SmartSpeakerActors,
-                                         send_to: SmartSpeakerActors) {
-    match sender.send(SmartSpeakerMessage::AttentionFinished(AttentionFinished {
+                                         send_to: SmartSpeakerActors,
+                                         result: ProcessResult, content: IntentContent) {
+    match sender.send(SmartSpeakerMessage::IntentFinalized(IntentFinalized {
         send_from,
         send_to,
+        result,
+        content
     })) {
         Ok(_) => {}
         Err(e) => {

@@ -1,6 +1,6 @@
 use pv_recorder::{Recorder, RecorderBuilder};
-// use cobra::{Cobra};
-use rhino::{Rhino, RhinoBuilder};
+use cobra::{Cobra};
+use rhino::{Rhino, RhinoBuilder, RhinoInference};
 use porcupine::{Porcupine, PorcupineBuilder, BuiltinKeywords};
 use cheetah::{Cheetah, CheetahBuilder};
 use anyhow::{anyhow, Result};
@@ -43,11 +43,18 @@ pub(crate) struct WakeWordDetector {
 }
 
 impl WakeWordDetector {
-    pub fn new(api_key: String) -> Self {
-        Self {
-            app: PorcupineBuilder::new_with_keywords(api_key,
-                                                     &[BuiltinKeywords::Jarvis, BuiltinKeywords::Alexa]).init().unwrap(),
+    pub fn new(api_key: String, context_path: String) -> Self {
+        if (context_path == "default") {
+            Self {
+                app: PorcupineBuilder::new_with_keywords(api_key,
+                                                         &[BuiltinKeywords::Jarvis, BuiltinKeywords::Alexa]).init().unwrap(),
+            }
+        } else {
+            Self {
+                app: PorcupineBuilder::new_with_keyword_paths(api_key, &[context_path]).model_path("porcupine_params_ja.pv").init().unwrap(),
+            }
         }
+
     }
 
     pub fn info(&mut self) {
@@ -68,24 +75,28 @@ impl WakeWordDetector {
     }
 }
 
-// pub(crate) struct VoiceActivityDetector {
-//     pub app: Cobra,
-// }
-//
-// impl VoiceActivityDetector {
-//     pub fn new(api_key: &String) -> Self {
-//         Self {
-//             app: Cobra::new(api_key.clone()).unwrap(),
-//         }
-//     }
-//
-//     pub fn detect(&mut self, pcm: &Vec<i16>) -> Result<f32> {
-//         match self.app.process(pcm) {
-//             Ok(probability) => Ok(probability),
-//             Err(_) => Err(anyhow!("failed to process audio frame"))
-//         }
-//     }
-// }
+pub(crate) struct VoiceActivityDetector {
+    pub app: Cobra,
+}
+
+impl VoiceActivityDetector {
+    pub fn new(api_key: String) -> Self {
+        Self {
+            app: Cobra::new(api_key).unwrap(),
+        }
+    }
+
+    pub fn info(&mut self) {
+        dbg!(self.app.version());
+    }
+
+    pub fn detect(&mut self, pcm: &Vec<i16>) -> Result<f32> {
+        match self.app.process(pcm) {
+            Ok(probability) => Ok(probability),
+            Err(_) => Err(anyhow!("failed to process audio frame"))
+        }
+    }
+}
 
 pub(crate) struct SpeechToIntent {
     pub app: Rhino,
@@ -94,7 +105,7 @@ pub(crate) struct SpeechToIntent {
 impl SpeechToIntent {
     pub fn new(api_key: String, context_path: String) -> Self {
         Self {
-            app: RhinoBuilder::new(api_key, context_path).init().unwrap(),
+            app: RhinoBuilder::new(api_key, context_path).model_path("rhino_params_ja.pv").init().unwrap(),
         }
     }
 
@@ -102,11 +113,16 @@ impl SpeechToIntent {
         dbg!(self.app.context_info());
     }
 
-    pub fn get_inference(&mut self) -> Result<Option<String>> {
+    pub fn get_inference(&mut self) -> Result<Option<RhinoInference>> {
         // TODO: Change return type as enum
         if let Ok(inference) = self.app.get_inference() {
             return if inference.is_understood {
-                Ok(inference.intent)
+                dbg!(&inference.is_understood);
+                dbg!(&inference.intent);
+                dbg!(&inference.slots);
+                Ok(
+                    Some(inference)
+                )
             } else {
                 Ok(None)
             }

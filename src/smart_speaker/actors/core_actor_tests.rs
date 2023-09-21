@@ -2,7 +2,7 @@
 mod core_actor_tests {
     use std::collections::HashMap;
     use std::sync::mpsc;
-    use crate::utils::message_util::{AttentionFinished, ReportTerminated, RequestAttention, RequestAudioStream, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
+    use crate::utils::message_util::{AttentionFinished, ReportTerminated, RequestStateUpdate, RequestAudioStream, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
     use super::super::core_actor::*;
 
     #[test]
@@ -56,7 +56,7 @@ mod core_actor_tests {
         let mut senders = HashMap::new();
         senders.insert(SmartSpeakerActors::CoreActor, tx);
         let mut handler = CoreActorMessageHandler {};
-        let message = SmartSpeakerMessage::RequestAttention(RequestAttention {
+        let message = SmartSpeakerMessage::RequestStateUpdate(RequestStateUpdate {
             send_from: SmartSpeakerActors::CoreActor,
             send_to: SmartSpeakerActors::CoreActor,
         });

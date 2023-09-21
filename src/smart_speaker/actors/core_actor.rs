@@ -2,19 +2,25 @@ use std::collections::HashMap;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
+use cobra::Cobra;
 use crate::smart_speaker::actors::audio_actor::AudioActor;
 use crate::smart_speaker::actors::camera_actor::CameraActor;
+use crate::smart_speaker::actors::context_actor::ContextActor;
 use crate::smart_speaker::actors::gaze_actor::GazeActor;
 use crate::smart_speaker::actors::speech_to_intent_actor::SpeechToIntentActor;
-use crate::smart_speaker::actors::stream_actor::StreamActor;
+use crate::smart_speaker::actors::machine_speech_actor::MachineSpeechActor;
+// use crate::smart_speaker::actors::stream_actor::StreamActor;
 use crate::smart_speaker::actors::vision_actor::VisionActor;
+use crate::smart_speaker::actors::voice_activity_detect_actor::VoiceActivityDetectActor;
 use crate::smart_speaker::actors::wake_word_actor::WakeWordActor;
+use crate::smart_speaker::models::core_model::{PendingType, SmartSpeakerState};
 use crate::smart_speaker::models::debug_model::DebugData;
 use crate::smart_speaker::models::gaze_model::Gaze;
-use crate::smart_speaker::models::mic_model::{AudioListener, SpeechToIntent, WakeWordDetector};
+use crate::smart_speaker::models::mic_model::{AudioListener, SpeechToIntent, VoiceActivityDetector, WakeWordDetector};
+use crate::smart_speaker::models::speak_model::MachineSpeech;
 use crate::smart_speaker::models::vision_model::Capture;
 use crate::utils::config_util::Config;
-use crate::utils::message_util::{AttentionFinished, QueryMessage, ReportTerminated, RequestAttention, RequestAudioStream, RequestCameraFrame, RequestGazeInfo, RequestMarkerInfo, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
+use crate::utils::message_util::{QueryMessage, ReportTerminated, RequestStateUpdate, RequestAudioStream, RequestCameraFrame, RequestGazeInfo, RequestMarkerInfo, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage, StringMessage, IntentFinalized, ProcessResult, VisionFinalized};
 use crate::utils::vision_util;
 use crate::utils::vision_util::VisionType;
 
@@ -101,7 +107,7 @@ impl CoreActorManager {
             }
             SmartSpeakerActors::WakeWordActor => {
                 let mut wake_word_actor = WakeWordActor::new(
-                    WakeWordDetector::new(config.pico_voice_api_key.clone()),
+                    WakeWordDetector::new(config.pico_voice_api_key.clone(), config.pico_voice_ppn_model_path.clone()),
                     rx,
                     sender.clone(),
                 );
@@ -122,15 +128,45 @@ impl CoreActorManager {
                     drop(speech_to_intent_actor);
                 });
             },
-            SmartSpeakerActors::StreamActor => {
-                let mut stream_actor = StreamActor::new(
+            SmartSpeakerActors::MachineSpeechActor => {
+                let mut machine_speech_actor = MachineSpeechActor::new(
+                    MachineSpeech::new(config.language.clone()),
                     rx,
                     sender.clone(),
                 );
                 thread::spawn(move || {
-                    stream_actor.run();
+                    machine_speech_actor.run();
+                });
+            },
+            SmartSpeakerActors::VoiceActivityDetectActor => {
+                let mut voice_activity_detect_actor = VoiceActivityDetectActor::new(
+                    VoiceActivityDetector::new(config.pico_voice_api_key.clone()),
+                    rx,
+                    sender.clone(),
+                );
+                thread::spawn(move || {
+                    voice_activity_detect_actor.run();
                 });
             }
+            SmartSpeakerActors::ContextActor => {
+                let mut context_actor = ContextActor::new(
+                    rx,
+                    sender.clone(),
+                    config.vision.clone()
+                );
+                thread::spawn(move || {
+                    context_actor.run();
+                });
+            }
+            // SmartSpeakerActors::StreamActor => {
+            //     let mut stream_actor = StreamActor::new(
+            //         rx,
+            //         sender.clone(),
+            //     );
+            //     thread::spawn(move || {
+            //         stream_actor.run();
+            //     });
+            // }
             _ => {}
         }
         self.add_sender(actor, tx);
@@ -235,43 +271,131 @@ impl CoreActorMessageHandler {
                 }
                 CoreActorState::WaitForNextMessage {}
             },
-            SmartSpeakerMessage::RequestAttention(RequestAttention { send_from: _, send_to: _ }) => {
-                println!("RequestAttention");
+            SmartSpeakerMessage::RequestStateUpdate(RequestStateUpdate { send_from, send_to, state }) => {
+                println!("RequestStateUpdate from {:?} to {:?}", &send_from, &state);
                 if self.debug.activated {
-                    self.debug.update_attention(true);
+                    self.debug.update_state(state.clone());
                 }
-                if let Some(sender) = senders.get(&SmartSpeakerActors::VisionActor) {
-                    sender.send(SmartSpeakerMessage::RequestAttention(RequestAttention {
-                        send_from: SmartSpeakerActors::CoreActor,
-                        send_to: SmartSpeakerActors::VisionActor,
+                match send_from {
+                    SmartSpeakerActors::WakeWordActor => {
+                        if senders.get(&SmartSpeakerActors::SpeechToIntentActor).is_none() {
+                            return CoreActorState::NewActorRequested {
+                                actor: SmartSpeakerActors::SpeechToIntentActor,
+                                custom_args: None,
+                            }
+                        }
+                    },
+                    SmartSpeakerActors::VoiceActivityDetectActor => {
+                        if senders.get(&SmartSpeakerActors::SpeechToIntentActor).is_none() {
+                            return CoreActorState::NewActorRequested {
+                                actor: SmartSpeakerActors::SpeechToIntentActor,
+                                custom_args: None,
+                            }
+                        }
+                    },
+                    SmartSpeakerActors::ContextActor => {
+                        match state {
+                            SmartSpeakerState::Idle => {
+                                if senders.get(&SmartSpeakerActors::WakeWordActor).is_none() {
+                                    return CoreActorState::NewActorRequested {
+                                        actor: SmartSpeakerActors::WakeWordActor,
+                                        custom_args: None,
+                                    }
+                                }
+                            }
+                            SmartSpeakerState::Pending(pending_type) => {
+                                match pending_type {
+                                    PendingType::Speak => {
+                                        if senders.get(&SmartSpeakerActors::VoiceActivityDetectActor).is_none() {
+                                            return CoreActorState::NewActorRequested {
+                                                actor: SmartSpeakerActors::VoiceActivityDetectActor,
+                                                custom_args: None,
+                                            }
+                                        }
+                                    }
+                                    PendingType::Vision => {
+                                        if let Some(sender) = senders.get(&SmartSpeakerActors::VisionActor) {
+                                            sender.send(SmartSpeakerMessage::RequestStateUpdate(RequestStateUpdate {
+                                                send_from: SmartSpeakerActors::CoreActor,
+                                                send_to: SmartSpeakerActors::VisionActor,
+                                                state: SmartSpeakerState::Attention,
+                                            })).expect("TODO: panic message");
+                                        }
+                                    }
+                                }
+                            }
+                            _ => {}
+                        }
+                    },
+                    _ => {}
+                }
+                // if let Some(sender) = senders.get(&SmartSpeakerActors::ContextActor) {
+                //     sender.send(SmartSpeakerMessage::RequestStateUpdate(RequestStateUpdate {
+                //         send_from: SmartSpeakerActors::CoreActor,
+                //         send_to: SmartSpeakerActors::ContextActor,
+                //         state: SmartSpeakerState::Attention,
+                //     })).expect("TODO: panic message");
+                // }
+                CoreActorState::WaitForNextMessage {}
+            },
+            SmartSpeakerMessage::IntentFinalized(IntentFinalized { send_from, send_to, result, content }) => {
+                if let Some(sender) = senders.get(&SmartSpeakerActors::ContextActor) {
+                    sender.send(SmartSpeakerMessage::IntentFinalized(IntentFinalized {
+                        send_from: send_from,
+                        send_to: SmartSpeakerActors::ContextActor,
+                        result: result.clone(),
+                        content: content.clone(),
                     })).expect("TODO: panic message");
-                }
-                if senders.get(&SmartSpeakerActors::SpeechToIntentActor).is_none() {
-                    return CoreActorState::NewActorRequested {
-                        actor: SmartSpeakerActors::SpeechToIntentActor,
-                        custom_args: None,
-                    }
                 }
                 CoreActorState::WaitForNextMessage {}
             },
-            SmartSpeakerMessage::AttentionFinished(AttentionFinished { send_from: _, send_to: _ }) => {
-                if self.debug.activated {
-                    self.debug.update_attention(false);
-                }
-                if let Some(sender) = senders.get(&SmartSpeakerActors::VisionActor) {
-                    sender.send(SmartSpeakerMessage::AttentionFinished(AttentionFinished {
-                        send_from: SmartSpeakerActors::CoreActor,
-                        send_to: SmartSpeakerActors::VisionActor,
+            SmartSpeakerMessage::VisionFinalized(VisionFinalized { send_from, send_to, result, content }) => {
+                if let Some(sender) = senders.get(&SmartSpeakerActors::ContextActor) {
+                    sender.send(SmartSpeakerMessage::VisionFinalized(VisionFinalized {
+                        send_from: send_from,
+                        send_to: SmartSpeakerActors::ContextActor,
+                        result: result.clone(),
+                        content: content.clone(),
                     })).expect("TODO: panic message");
-                }
-                if senders.get(&SmartSpeakerActors::WakeWordActor).is_none() {
-                    return CoreActorState::NewActorRequested {
-                        actor: SmartSpeakerActors::WakeWordActor,
-                        custom_args: None,
-                    }
                 }
                 CoreActorState::WaitForNextMessage {}
             },
+            // SmartSpeakerMessage::AttentionFinished(AttentionFinished { send_from: _, send_to: _, result }) => {
+            //     if self.debug.activated {
+            //         self.debug.update_attention(false);
+            //     }
+            //     if let Some(sender) = senders.get(&SmartSpeakerActors::VisionActor) {
+            //         sender.send(SmartSpeakerMessage::AttentionFinished(AttentionFinished {
+            //             send_from: SmartSpeakerActors::CoreActor,
+            //             send_to: SmartSpeakerActors::VisionActor,
+            //             result: result.clone(),
+            //         })).expect("TODO: panic message");
+            //     }
+            //     if senders.get(&SmartSpeakerActors::WakeWordActor).is_none() {
+            //         return CoreActorState::NewActorRequested {
+            //             actor: SmartSpeakerActors::WakeWordActor,
+            //             custom_args: None,
+            //         }
+            //     }
+            //     if let Some(sender) = senders.get(&SmartSpeakerActors::MachineSpeechActor) {
+            //         sender.send(SmartSpeakerMessage::AttentionFinished(AttentionFinished {
+            //             send_from: SmartSpeakerActors::CoreActor,
+            //             send_to: SmartSpeakerActors::MachineSpeechActor,
+            //             result: result.clone(),
+            //         })).expect("TODO: panic message");
+            //     }
+            //     CoreActorState::WaitForNextMessage {}
+            // },
+            SmartSpeakerMessage::StringMessage(StringMessage { send_from, send_to, message }) => {
+                if let Some(sender) = senders.get(&send_to) {
+                    sender.send(SmartSpeakerMessage::StringMessage(StringMessage {
+                        send_from,
+                        send_to,
+                        message,
+                    })).expect("TODO: panic message");
+                }
+                CoreActorState::WaitForNextMessage {}
+            }
             _ => {
                 CoreActorState::WaitForNextMessage {}
             }
@@ -306,11 +430,13 @@ impl CoreActor {
     fn init(&mut self) {
         self.manager.spawn_actor(&self.config, SmartSpeakerActors::AudioActor, self.sender.clone());
         self.manager.spawn_actor(&self.config, SmartSpeakerActors::WakeWordActor, self.sender.clone());
+        self.manager.spawn_actor(&self.config, SmartSpeakerActors::ContextActor, self.sender.clone());
         self.manager.spawn_actor(&self.config, SmartSpeakerActors::CameraActor, self.sender.clone());
         if self.config.vision {
             self.manager.spawn_actor(&self.config, SmartSpeakerActors::VisionActor, self.sender.clone());
             self.manager.spawn_actor(&self.config, SmartSpeakerActors::GazeActor, self.sender.clone());
         }
+        self.manager.spawn_actor(&self.config, SmartSpeakerActors::MachineSpeechActor, self.sender.clone());
         self.manager.spawn_actor(&self.config, SmartSpeakerActors::StreamActor, self.sender.clone());
     }
 

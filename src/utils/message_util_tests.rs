@@ -28,14 +28,14 @@ mod message_util_tests {
     #[test]
     fn attention_message_test() {
         let (sender, receiver) = mpsc::channel::<SmartSpeakerMessage>();
-        attention_message(
+        state_update_message(
             &sender,
             SmartSpeakerActors::WakeWordActor,
             SmartSpeakerActors::CoreActor,
         );
         let message = receiver.recv().unwrap();
         match message {
-            SmartSpeakerMessage::RequestAttention(RequestAttention { send_from, send_to }) => {
+            SmartSpeakerMessage::RequestStateUpdate(RequestStateUpdate { send_from, send_to }) => {
                 assert_eq!(send_from, SmartSpeakerActors::WakeWordActor);
                 assert_eq!(send_to, SmartSpeakerActors::CoreActor);
             },

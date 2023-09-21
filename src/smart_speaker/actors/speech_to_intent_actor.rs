@@ -1,10 +1,13 @@
+use std::str::FromStr;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
+use rhino::RhinoInference;
 use crate::smart_speaker::controllers::mic_controller;
+use crate::smart_speaker::models::intent_model::{IntentAction, IntentCookingMenu};
 use crate::smart_speaker::models::mic_model::SpeechToIntent;
 use crate::utils::message_util;
-use crate::utils::message_util::{RequestAudioStream, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
+use crate::utils::message_util::{IntentContent, ProcessResult, RequestAudioStream, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
 
 pub(crate) struct SpeechToIntentActor {
     alive: bool,
@@ -62,10 +65,30 @@ impl SpeechToIntentActor {
     fn listen(&mut self, stream: &Vec<i16>) {
         if let Ok(finalized) = mic_controller::speech_to_intent_feed(&mut self.app, &stream) {
             if finalized {
+                let mut content = IntentContent {
+                    intent: IntentAction::None,
+                    entities: vec![],
+                };
                 if let Ok(inference) = self.app.get_inference() {
-                    dbg!(inference);
+                    match inference {
+                        None => {}
+                        Some(i) => {
+                            content.intent = IntentAction::from_str(&i.intent.unwrap()).unwrap();
+                            for (key, value) in i.slots {
+                                match key.as_str() {
+                                    "menu_name" => {
+                                        content.entities.push(Box::new(IntentCookingMenu::from_str(&value).unwrap()));
+                                    }
+                                    &_ => {}
+                                }
+                            }
+
+                        }
+                    }
+                    self.intent_finalized(ProcessResult::Success, content);
+                } else {
+                    self.intent_finalized(ProcessResult::Failure, content);
                 }
-                self.attention_finished();
                 self.terminate();
             }
         }
@@ -80,11 +103,14 @@ impl SpeechToIntentActor {
         )
     }
 
-    fn attention_finished(&mut self) {
-        message_util::attention_finished_message(
+    fn intent_finalized(&mut self, result: ProcessResult, content: IntentContent) {
+        message_util::intent_finalized_message(
             &self.sender,
             SmartSpeakerActors::SpeechToIntentActor,
-            SmartSpeakerActors::CoreActor)
+            SmartSpeakerActors::ContextActor,
+            result,
+            content,
+        )
     }
 
     fn terminate(&mut self) {
