@@ -1,7 +1,7 @@
 # VAs-got-vision
 
 ## Current screenshots
-![](/Users/noxowl/Dropbox/works/repository/jaist/VAs-got-vision/resources/images/rev.1.beta-2023-10-20.png)
+![](resources/images/rev.1.beta-2023-10-20.png)
 
 ## How to use
 1. Need to .env for compile and execute (changeme).
