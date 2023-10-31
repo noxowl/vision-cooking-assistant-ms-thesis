@@ -1,13 +1,7 @@
 # VAs-got-vision
 
-## Features
-* Recognize Human voice (VAD).
-* Execute marker detection process by Human voice.
-* Detect ArUco Marker and find nearest from gaze (fallback is centroid of frame or 0,0).
-
 ## Current screenshots
-![](resources/images/test_1.png)
-![](resources/images/test_2.png)
+![](/Users/noxowl/Dropbox/works/repository/jaist/VAs-got-vision/resources/images/rev.1.beta-2023-10-20.png)
 
 ## How to use
 1. Need to .env for compile and execute (changeme).
@@ -20,23 +14,36 @@ PICOVOICE_MIC_INDEX=indexhere
 3. ~ run command for execute.
 
 ## TODO
-* Order sentence recognition.
-* Link to IoT device and Alexa API.
 
-### 개인용 마일스톤 (Korean)
-* 공통
-  * [ ] IoT 기능 (전구)
-  * [ ] IoT 기능 (적외선 해야 할 것 같은데...)
-  * [ ] 이게 뭐야 쿼리 기능
-  * [ ] 날씨 쿼리 기능 (알렉사로 넘기기?)
-  * [X] Picovoice 음성인식
-* 비전
-  * [X] 비전용 메시지센터
-  * [X] 마커인식
-  * [ ] 오브젝트 인식
-* 논비전
-  * [ ] 인식 안된 명령 폴백
-  * [ ] 논비전용 메시지센터
-* 시나리오
-  * [ ] 1인 시나리오
-  * [ ] 2인 시나리오
+### Milestone
+* Actors
+  * [X] Core actor (message center)
+  * [X] Audio actor
+  * [X] Wake word actor
+    * [X] Picovoice Porcupine
+  * [X] Speech to intents actor
+    * [X] Picovoice Rhino
+  * [X] Voice activity detection actor
+    * [X] Picovoice Cobra
+  * [X] Text to speech actor
+  * [X] Camera actor
+    * [X] Get frame from webcam
+    * [X] Get frame from pupil labs (zmq)
+  * [X] Computer Vision actor
+    * [X] ArUco Marker detection
+    * [X] Simple Object detection (based on colour. replace to YOLOv5?)
+    * [X] Measure object size (Based on ArUco Marker)
+  * [X] Gaze actor
+    * [X] Get gaze from pupil labs (zmq)
+    * [X] Get gaze from frame center (fallback)
+  * [ ] Context actor
+    * [X] Holding current context (task)
+    * [ ] Data flow for task
+  * [ ] Input actor (for debug. keyboard input)
+  * [ ] Stream actor (for recording)
+  * [ ] Query actor (deprecated. for RPC)
+* Task
+  * [ ] Task model base
+  * [ ] Cooking task structure
+    * [ ] Ingredient revision model
+    * [ ] (Cooking) Carrot salad
