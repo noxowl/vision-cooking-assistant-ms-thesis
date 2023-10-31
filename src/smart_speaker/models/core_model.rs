@@ -1,4 +1,5 @@
 use std::fmt::{Display, Formatter};
+use crate::smart_speaker::models::vision_model::VisionAction;
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum SmartSpeakerState {
@@ -20,14 +21,14 @@ impl Display for SmartSpeakerState {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum PendingType {
     Speak,
-    Vision,
+    Vision(Vec<VisionAction>),
 }
 
 impl Display for PendingType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             PendingType::Speak => write!(f, "Speak"),
-            PendingType::Vision => write!(f, "Vision"),
+            PendingType::Vision(VisionAction) => write!(f, "Vision"),
         }
     }
 }

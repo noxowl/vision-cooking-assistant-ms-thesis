@@ -1,9 +1,12 @@
 use std::ops::Mul;
 use opencv::{prelude::*, highgui, core::Point2f, core::Vector, types::VectorOfPoint2f, types::VectorOfVectorOfPoint2f};
+use opencv::gapi::mask;
+use opencv::imgproc::min_area_rect;
 use crate::smart_speaker::controllers::vision_controller;
 use crate::smart_speaker::controllers::debug_controller;
 use crate::smart_speaker::models::core_model::SmartSpeakerState;
 use crate::smart_speaker::models::marker_model::{IngredientMarker};
+use crate::smart_speaker::models::vision_model;
 use crate::utils::vision_util;
 
 pub(crate) struct DebugData {
@@ -12,7 +15,6 @@ pub(crate) struct DebugData {
     pub gaze_x: f32,
     pub gaze_y: f32,
     pub state: SmartSpeakerState,
-    pub last_marker_info: (VectorOfVectorOfPoint2f, Vector<i32>)
 }
 
 impl DebugData {
@@ -23,38 +25,76 @@ impl DebugData {
             gaze_x: 0.,
             gaze_y: 0.,
             state: SmartSpeakerState::Idle,
-            last_marker_info: (VectorOfVectorOfPoint2f::new(), Vector::new()),
         }
     }
 
     pub(crate) fn print(&mut self) {
-        match &mut self.frame {
+        match &self.frame {
             Some(frame) => {
+                let mut display_frame: Mat = Default::default();
+                frame.copy_to(&mut display_frame).unwrap();
                 match &self.state {
                     SmartSpeakerState::Idle => {
-                        debug_controller::write_text_to_mat(frame, "Waiting for wake word...", 10, 40);
+                        debug_controller::write_text_to_mat(&mut display_frame, "Waiting for wake word...", 10, 40);
                     }
                     SmartSpeakerState::Attention => {
-                        debug_controller::write_text_to_mat(frame, "Attention to user", 10, 40);
+                        debug_controller::write_text_to_mat(&mut display_frame, "Attention to user", 10, 40);
                     }
                     SmartSpeakerState::Pending(pending_type) => {
-                        debug_controller::write_text_to_mat(frame, &format!("pending for {}", pending_type), 10, 40);
+                        debug_controller::write_text_to_mat(&mut display_frame, &format!("pending for {}", pending_type), 10, 40);
                     }
                 }
-                debug_controller::write_text_to_mat(frame, &format!("Gaze: ({}, {})", self.gaze_x, self.gaze_y), 10, 20);
-                debug_controller::draw_circle_to_mat(frame, self.gaze_x.mul(frame.cols() as f32) as i32, frame.rows() - self.gaze_y.mul(frame.rows() as f32) as i32);
-                debug_controller::draw_aruco(frame, &self.last_marker_info.0, &self.last_marker_info.1);
-                for i in 0..self.last_marker_info.1.len() {
-                    let square = self.last_marker_info.0.get(i).unwrap();
-                    let square_mid = vision_util::midpoint(
-                        &square.get(0).unwrap().x,
-                        &square.get(0).unwrap().y,
-                        &square.get(2).unwrap().x,
-                        &square.get(2).unwrap().y
-                    );
-                    debug_controller::write_text_to_mat(frame, &format!("{}: ({}, {})", IngredientMarker::from(self.last_marker_info.1.get(i).unwrap() as u32), square_mid.0, square_mid.1), 10, 60 + i as i32 * 20);
+                debug_controller::write_text_to_mat(&mut display_frame, &format!("Gaze: ({}, {})", self.gaze_x, self.gaze_y), 10, 20);
+                debug_controller::draw_circle_to_mat(&mut display_frame, self.gaze_x.mul(frame.cols() as f32) as i32, frame.rows() - self.gaze_y.mul(frame.rows() as f32) as i32);
+
+                // Begin debug for object detection
+                let (aruco_contours, aruco_index) = vision_controller::detect_aruco(frame).unwrap();
+                let (width_ratios, height_ratios) = vision_util::get_measure_criteria_from_aruco(&aruco_contours).unwrap();
+
+                // For ArUco debug print
+                debug_controller::draw_aruco(&mut display_frame, &aruco_contours, &aruco_index);
+                for i in 0..aruco_contours.len() {
+                    let square = vision_util::get_min_rect2f(&aruco_contours.get(i).unwrap());
+                    let mut points = [Point2f::default(); 4];
+                    square.points(&mut points).unwrap();
+                    let width = vision_util::distance(&points[1].x, &points[1].y, &points[2].x, &points[2].y);
+                    let height = vision_util::distance(&points[0].x, &points[0].y, &points[1].x, &points[1].y);
+                    let points_width = vision_util::pixel_to_metric(
+                        width,
+                        &width_ratios.get(i).unwrap());
+                    let points_height = vision_util::pixel_to_metric(
+                        height,
+                        &height_ratios.get(i).unwrap());
+                    debug_controller::write_text_to_mat(&mut display_frame, &format!("{}: ({:.1}x{:.1}) cm", aruco_index.get(i).unwrap() as u32, points_width, points_height), square.center.x as i32, square.center.y as i32 + 20 );
                 }
-                highgui::imshow("Debug Screen", frame).unwrap();
+
+                // For object detection debug print
+                let masked = vision_util::mask_object(frame, vision_model::DetectableObject::Carrot).unwrap();
+                match vision_controller::detect_target_objects(frame, &vision_model::DetectableObject::Carrot) {
+                    Ok(objects) => {
+                        debug_controller::write_text_to_mat(&mut display_frame, &format!("Contour: {}", &objects.len()), 10, 60);
+
+                        match vision_controller::measure_object_size_by_aruco(&aruco_contours, &objects) {
+                            Ok(measure_result) => {
+                                for i in 0..measure_result.len() {
+                                    let rect = vision_util::get_min_rect2f(&objects.get(i).unwrap());
+                                    let object_size = measure_result.get(i).unwrap();
+
+                                    debug_controller::draw_rotated_rect_to_mat(&mut display_frame, &rect);
+                                    debug_controller::draw_approx_poly_to_mat(&mut display_frame, &objects.get(i).unwrap());
+                                    debug_controller::write_text_to_mat(&mut display_frame, &format!("Object: {:.1} cm^2 ({:.1}x{:.1}) cm", object_size.perimeter, object_size.width, object_size.height), rect.center.x as i32, rect.center.y as i32 + 20 );
+                                }
+                            }
+                            Err(_) => {
+                            }
+                        }
+                    }
+                    Err(_) => {
+                    }
+                }
+
+                highgui::imshow("Debug Screen", &display_frame).unwrap();
+                highgui::imshow("Debug Screen 2", &masked).unwrap();
                 highgui::wait_key(1).unwrap();
             },
             None => {
@@ -75,19 +115,19 @@ impl DebugData {
         self.gaze_y = gaze_y.clone();
     }
 
-    pub(crate) fn update_marker_info(&mut self, marker_info: &(Vec<Vec<(f32, f32)>>, Vec<i32>)) {
-        self.last_marker_info = (
-            VectorOfVectorOfPoint2f::from_iter(marker_info.0.iter().map(|vec| {
-                VectorOfPoint2f::from_iter(vec.iter().map(|(x, y)| {
-                    Point2f::new(x.clone(), y.clone()) // original size
-                    // Point2f::new(x.clone() / 2.0, y.clone() / 2.0) // resize to half
-                }))
-            })),
-            Vector::from_iter(marker_info.1.iter().map(|id| {
-                id.clone()
-            }))
-            );
-    }
+    // pub(crate) fn update_marker_info(&mut self, marker_info: &(Vec<Vec<(f32, f32)>>, Vec<i32>)) {
+    //     self.last_marker_info = (
+    //         VectorOfVectorOfPoint2f::from_iter(marker_info.0.iter().map(|vec| {
+    //             VectorOfPoint2f::from_iter(vec.iter().map(|(x, y)| {
+    //                 Point2f::new(x.clone(), y.clone()) // original size
+    //                 // Point2f::new(x.clone() / 2.0, y.clone() / 2.0) // resize to half
+    //             }))
+    //         })),
+    //         Vector::from_iter(marker_info.1.iter().map(|id| {
+    //             id.clone()
+    //         }))
+    //         );
+    // }
 
     pub(crate) fn update_state(&mut self, state: SmartSpeakerState) {
         self.state = state;

@@ -2,7 +2,9 @@
 mod core_actor_tests {
     use std::collections::HashMap;
     use std::sync::mpsc;
-    use crate::utils::message_util::{AttentionFinished, ReportTerminated, RequestStateUpdate, RequestAudioStream, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
+    use crate::smart_speaker::models::core_model::SmartSpeakerState;
+    use crate::smart_speaker::models::debug_model::DebugData;
+    use crate::utils::message_util::{ReportTerminated, RequestStateUpdate, RequestAudioStream, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
     use super::super::core_actor::*;
 
     #[test]
@@ -10,7 +12,9 @@ mod core_actor_tests {
         let (tx, rx) = mpsc::channel();
         let mut senders = HashMap::new();
         senders.insert(SmartSpeakerActors::CoreActor, tx);
-        let handler = CoreActorMessageHandler {};
+        let mut handler = CoreActorMessageHandler {
+            debug: DebugData::new(false),
+            };
         let message = SmartSpeakerMessage::RequestShutdown(RequestShutdown {});
         let state = handler.handle_message(senders, message);
         assert_eq!(state, CoreActorState::ShutdownRequested {});
@@ -22,7 +26,9 @@ mod core_actor_tests {
         let (tx, _) = mpsc::channel();
         let mut senders = HashMap::new();
         senders.insert(SmartSpeakerActors::CoreActor, tx);
-        let mut handler = CoreActorMessageHandler {};
+        let mut handler = CoreActorMessageHandler {
+            debug: DebugData::new(false),
+        };
         let message = SmartSpeakerMessage::ReportTerminated(ReportTerminated {
             send_from: SmartSpeakerActors::CoreActor, send_to: SmartSpeakerActors::CoreActor});
         let state = handler.handle_message(senders, message);
@@ -34,7 +40,9 @@ mod core_actor_tests {
         let (tx, rx) = mpsc::channel();
         let mut senders = HashMap::new();
         senders.insert(SmartSpeakerActors::CoreActor, tx);
-        let mut handler = CoreActorMessageHandler {};
+        let mut handler = CoreActorMessageHandler {
+            debug: DebugData::new(false),
+        };
         let message = SmartSpeakerMessage::RequestAudioStream(RequestAudioStream {
             send_from: SmartSpeakerActors::CoreActor,
             send_to: SmartSpeakerActors::CoreActor,
@@ -55,13 +63,16 @@ mod core_actor_tests {
         let (tx, _) = mpsc::channel();
         let mut senders = HashMap::new();
         senders.insert(SmartSpeakerActors::CoreActor, tx);
-        let mut handler = CoreActorMessageHandler {};
+        let mut handler = CoreActorMessageHandler {
+            debug: DebugData::new(false),
+        };
         let message = SmartSpeakerMessage::RequestStateUpdate(RequestStateUpdate {
             send_from: SmartSpeakerActors::CoreActor,
             send_to: SmartSpeakerActors::CoreActor,
+            state: SmartSpeakerState::Attention,
         });
         let state = handler.handle_message(senders, message);
-        assert_eq!(state, CoreActorState::NewActorRequested { actor: SmartSpeakerActors::SpeechToIntentActor });
+        assert_eq!(state, CoreActorState::NewActorRequested { actor: SmartSpeakerActors::SpeechToIntentActor, custom_args: None });
     }
 
     #[test]
@@ -69,12 +80,15 @@ mod core_actor_tests {
         let (tx, _) = mpsc::channel();
         let mut senders = HashMap::new();
         senders.insert(SmartSpeakerActors::CoreActor, tx);
-        let mut handler = CoreActorMessageHandler {};
-        let message = SmartSpeakerMessage::AttentionFinished(AttentionFinished {
+        let mut handler = CoreActorMessageHandler {
+            debug: DebugData::new(false),
+        };
+        let message = SmartSpeakerMessage::RequestStateUpdate(RequestStateUpdate {
             send_from: SmartSpeakerActors::CoreActor,
             send_to: SmartSpeakerActors::CoreActor,
+            state: SmartSpeakerState::Attention,
         });
         let state = handler.handle_message(senders, message);
-        assert_eq!(state, CoreActorState::NewActorRequested { actor: SmartSpeakerActors::WakeWordActor });
+        assert_eq!(state, CoreActorState::NewActorRequested { actor: SmartSpeakerActors::WakeWordActor, custom_args: None });
     }
 }

@@ -89,6 +89,7 @@ impl CoreActorManager {
                 let mut vision_actor = VisionActor::new(
                     rx,
                     sender.clone(),
+                    config.debug.clone()
                 );
                 thread::spawn(move || {
                     vision_actor.run();
@@ -187,7 +188,7 @@ pub(crate) enum CoreActorState {
 }
 
 pub(crate) struct CoreActorMessageHandler {
-    debug: DebugData,
+    pub(crate) debug: DebugData,
 }
 
 impl CoreActorMessageHandler {
@@ -251,9 +252,9 @@ impl CoreActorMessageHandler {
                 CoreActorState::WaitForNextMessage {}
             },
             SmartSpeakerMessage::RequestMarkerInfo(RequestMarkerInfo { send_from, send_to, marker_info }) => {
-                if self.debug.activated && send_from == SmartSpeakerActors::VisionActor {
-                    self.debug.update_marker_info(&marker_info);
-                }
+                // if self.debug.activated && send_from == SmartSpeakerActors::VisionActor {
+                //     self.debug.update_marker_info(&marker_info);
+                // }
                 if send_to != SmartSpeakerActors::CoreActor {
                     if let Some(sender) = senders.get(&send_to) {
                         sender.send(SmartSpeakerMessage::RequestMarkerInfo(RequestMarkerInfo { send_from, send_to, marker_info })).expect("TODO: panic message");
@@ -313,7 +314,7 @@ impl CoreActorMessageHandler {
                                             }
                                         }
                                     }
-                                    PendingType::Vision => {
+                                    PendingType::Vision(action) => {
                                         if let Some(sender) = senders.get(&SmartSpeakerActors::VisionActor) {
                                             sender.send(SmartSpeakerMessage::RequestStateUpdate(RequestStateUpdate {
                                                 send_from: SmartSpeakerActors::CoreActor,
@@ -349,13 +350,13 @@ impl CoreActorMessageHandler {
                 }
                 CoreActorState::WaitForNextMessage {}
             },
-            SmartSpeakerMessage::VisionFinalized(VisionFinalized { send_from, send_to, result, content }) => {
+            SmartSpeakerMessage::VisionFinalized(VisionFinalized { send_from, send_to, result, contents }) => {
                 if let Some(sender) = senders.get(&SmartSpeakerActors::ContextActor) {
                     sender.send(SmartSpeakerMessage::VisionFinalized(VisionFinalized {
                         send_from: send_from,
                         send_to: SmartSpeakerActors::ContextActor,
                         result: result.clone(),
-                        content: content.clone(),
+                        contents: contents.clone(),
                     })).expect("TODO: panic message");
                 }
                 CoreActorState::WaitForNextMessage {}

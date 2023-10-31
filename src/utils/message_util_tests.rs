@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod message_util_tests {
     use std::sync::mpsc;
+    use crate::smart_speaker::models::core_model::SmartSpeakerState;
     use super::super::message_util::*;
 
     #[test]
@@ -32,10 +33,12 @@ mod message_util_tests {
             &sender,
             SmartSpeakerActors::WakeWordActor,
             SmartSpeakerActors::CoreActor,
+            SmartSpeakerState::Attention,
         );
         let message = receiver.recv().unwrap();
         match message {
-            SmartSpeakerMessage::RequestStateUpdate(RequestStateUpdate { send_from, send_to }) => {
+            SmartSpeakerMessage::RequestStateUpdate(
+                RequestStateUpdate { send_from, send_to, state }) => {
                 assert_eq!(send_from, SmartSpeakerActors::WakeWordActor);
                 assert_eq!(send_to, SmartSpeakerActors::CoreActor);
             },

@@ -64,6 +64,9 @@ impl MachineSpeechActor {
             //         }
             //     }
             // },
+            SmartSpeakerMessage::RequestTextToSpeech(message) => {
+                self.speech(message.message);
+            },
             SmartSpeakerMessage::StringMessage(message) => {
                 self.speech(message.message);
             },

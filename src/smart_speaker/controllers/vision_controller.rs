@@ -1,8 +1,10 @@
 use anyhow::{anyhow, Result};
 use opencv::{objdetect, imgproc};
 use opencv::prelude::*;
-use opencv::core::{Point, Scalar, Vector, Size};
-use opencv::types::{VectorOfi32, VectorOfVectorOfPoint2f};
+use opencv::core::{Point, Scalar, Vector, Size, Point2f};
+use opencv::types::{VectorOfi32, VectorOfPoint2f, VectorOfVectorOfPoint2f};
+use crate::smart_speaker::models::vision_model::{DetectableObject, VisionObjectSize};
+use crate::utils::vision_util;
 
 
 pub(crate) fn data_bytes_to_mat(bytes: Vec<u8>, height: i32) -> Result<Mat> {
@@ -40,8 +42,62 @@ pub(crate) fn resize_frame(frame: Mat) -> Mat {
     resized_frame
 }
 
+pub(crate) fn detect_target_objects(frame: &Mat, target: &DetectableObject) -> Result<Vector<Vector<Point2f>>> {
+    let mut detected_objects = Vector::new();
+    let mut object_mask = Mat::default();
+    match target {
+        DetectableObject::Carrot => {
+            object_mask = vision_util::mask_object(&frame, DetectableObject::Carrot).unwrap();
+        }
+        DetectableObject::HumanSkin => {
+            object_mask = vision_util::mask_object(&frame, DetectableObject::HumanSkin).unwrap();
+        }
+    }
+    let object_contours = vision_util::get_object_contours(&object_mask).unwrap();
+    for contour in object_contours {
+        detected_objects.push(vision_util::get_approx_poly_dp(&contour));
+    }
+    Ok(detected_objects)
+}
+
 /// measure object size by aruco marker
-pub(crate) fn measure_object_size_by_aruco() {}
+pub(crate) fn measure_object_size_by_aruco(aruco_corners: &VectorOfVectorOfPoint2f, object_contours: &VectorOfVectorOfPoint2f) -> Result<Vec<VisionObjectSize>> {
+    let mut results: Vec<VisionObjectSize> = Vec::new();
+    let (width_ratios, height_ratios) = vision_util::get_measure_criteria_from_aruco(&aruco_corners)?;
+    let ratios = width_ratios.iter().zip(height_ratios.iter()).map(|(a, b)| a * b).collect::<Vec<f32>>();
+
+    for contour in object_contours {
+        let rect = vision_util::get_min_rect2f(&contour);
+        let mut points = [Point2f::default(); 4];
+        rect.points(&mut points).unwrap();
+        let width = vision_util::distance(&points[1].x, &points[1].y, &points[2].x, &points[2].y);
+        let height = vision_util::distance(&points[0].x, &points[0].y, &points[1].x, &points[1].y);
+        let mut width_candidates: Vec<f32> = Vec::new();
+        let mut height_candidates: Vec<f32> = Vec::new();
+        let mut perimeter_candidates: Vec<f32> = Vec::new();
+        for i in 0..ratios.len() {
+            let object_width = vision_util::pixel_to_metric(
+                width.clone(),
+                width_ratios.get(i).unwrap());
+            let object_height = vision_util::pixel_to_metric(
+                height,
+                height_ratios.get(i).unwrap());
+            perimeter_candidates.push(vision_util::approx_to_arch_length_metric(&contour, ratios.get(i).unwrap()));
+            width_candidates.push(object_width);
+            height_candidates.push(object_height);
+        }
+        let object_width = width_candidates.iter().sum::<f32>() / width_candidates.len() as f32;
+        let object_height = height_candidates.iter().sum::<f32>() / height_candidates.len() as f32;
+        let object_perimeter = perimeter_candidates.iter().sum::<f32>() / perimeter_candidates.len() as f32;
+        results.push(VisionObjectSize::new(
+            object_width,
+            object_height,
+            object_perimeter,
+        ));
+    }
+
+    Ok(results)
+}
 
 // pub  fn find_nearest_aruco(gaze: &(f32, f32), corners: &VectorOfVectorOfPoint2f, ids: &Vector<i32>) -> Result<DetectedMarker> {
 //     let mut nearest_index = 0;

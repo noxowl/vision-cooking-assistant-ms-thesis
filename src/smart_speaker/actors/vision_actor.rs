@@ -1,13 +1,16 @@
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
+use anyhow::{anyhow, Result};
 use bounded_vec_deque::BoundedVecDeque;
 use opencv::{core::Mat, core::Vector, types::VectorOfVectorOfPoint2f};
 use crate::smart_speaker::controllers::vision_controller;
-use crate::utils::message_util::{camera_frame_message, gaze_info_message, marker_info_message, RequestCameraFrame, RequestGazeInfo, SmartSpeakerActors, SmartSpeakerMessage};
+use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction, VisionObject, VisionSlot};
+use crate::utils::message_util::{camera_frame_message, gaze_info_message, marker_info_message, RequestCameraFrame, RequestGazeInfo, SmartSpeakerActors, SmartSpeakerMessage, RequestVisionAction, VisionContent};
 
 pub(crate) struct VisionActor {
     alive: bool,
+    debug: bool,
     attention: bool,
     receiver: mpsc::Receiver<SmartSpeakerMessage>,
     sender: mpsc::Sender<SmartSpeakerMessage>,
@@ -17,9 +20,10 @@ pub(crate) struct VisionActor {
 }
 
 impl VisionActor {
-    pub(crate) fn new(receiver: mpsc::Receiver<SmartSpeakerMessage>, sender: mpsc::Sender<SmartSpeakerMessage>) -> Self {
+    pub(crate) fn new(receiver: mpsc::Receiver<SmartSpeakerMessage>, sender: mpsc::Sender<SmartSpeakerMessage>, debug: bool) -> Self {
         Self {
             alive: true,
+            debug,
             attention: false,
             receiver,
             sender,
@@ -43,13 +47,6 @@ impl VisionActor {
                 } else {
                     pending = false;
                 }
-                if self.attention {
-                    let aruco_result = vision_controller::detect_aruco(&mut self.previous_frames.back().unwrap()).unwrap();
-                    self.previous_aruco_info.push_back(aruco_result);
-                } else {
-                    self.previous_aruco_info.push_back((VectorOfVectorOfPoint2f::new(), Vector::new()));
-                }
-                self.send_request_marker_info();
             }
             thread::sleep(Duration::from_millis(33));
         }
@@ -65,16 +62,38 @@ impl VisionActor {
                                                         frame_data_bytes,
                                                         height,}) => {
                 self.handle_frame_data_bytes(frame_data_bytes, height);
+                match self.previous_frames.back() {
+                    Some(frame) => {
+                        let aruco_result = vision_controller::detect_aruco(frame).unwrap();
+                        self.previous_aruco_info.push_back(aruco_result);
+                    }
+                    None => {
+                        self.previous_aruco_info.push_back((VectorOfVectorOfPoint2f::new(), Vector::new()));
+                    }
+                }
             },
             SmartSpeakerMessage::RequestGazeInfo(RequestGazeInfo { send_from: _, send_to: _, gaze_info }) => {
                 self.handle_gaze_info(gaze_info);
             },
+            SmartSpeakerMessage::RequestVisionAction(RequestVisionAction { send_from: _, send_to: _, actions: actions }) => {
+                let mut result: Vec<VisionContent> = Vec::new();
+                for action in actions {
+                    match action {
+                        VisionAction::None => {}
+                        VisionAction::ObjectDetectionWithAruco(target) => {
+                            match self.handle_object_detection_with_aruco(target) {
+                                Ok(content) => {
+                                    result.push(content);
+                                }
+                                Err(_) => {}
+                            }
+                        }
+                    }
+                }
+            },
             SmartSpeakerMessage::RequestStateUpdate(_) => {
                 self.attention = true;
             },
-            // SmartSpeakerMessage::AttentionFinished(_) => {
-            //     self.attention = false;
-            // }
             _ => {}
         }
     }
@@ -92,6 +111,48 @@ impl VisionActor {
         self.previous_gaze_info.push_back((x, y));
     }
 
+    fn handle_object_detection_with_aruco(&self, target: DetectableObject) -> Result<VisionContent> {
+        match self.previous_aruco_info.back() {
+            None => {
+                Err(anyhow!("failed to detect target objects: no aruco data"))
+            }
+            Some((aruco, aruco_index)) => {
+                match self.previous_frames.back() {
+                    Some(frame) => {
+                        match vision_controller::detect_target_objects(frame, &target) {
+                            Ok(objects) => {
+                                println!("Detected objects: {}", &objects.len());
+                                match vision_controller::measure_object_size_by_aruco(aruco, &objects) {
+                                    Ok(measure_result) => {
+                                        let content_result = VisionContent::new(
+                                            VisionAction::ObjectDetectionWithAruco(target.clone()),
+                                            measure_result.iter()
+                                                .map(|object| {
+                                                    Box::new(VisionObject::new(
+                                                        target.clone(),
+                                                        object.clone())) as Box<dyn VisionSlot>
+                                                }).collect()
+                                        );
+                                        Ok(content_result)
+                                    }
+                                    Err(_) => {
+                                        Err(anyhow!("failed to measure target objects"))
+                                    }
+                                }
+                            }
+                            Err(_) => {
+                                Err(anyhow!("failed to detect target objects"))
+                            }
+                        }
+                    }
+                    None => {
+                        Err(anyhow!("failed to detect target objects: no frame data"))
+                    }
+                }
+            }
+        }
+    }
+
     fn request_camera_frame(&self) {
         camera_frame_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerActors::CameraActor, vec![], 0);
     }
@@ -102,6 +163,10 @@ impl VisionActor {
 
     fn send_request_marker_info(&self) {
         marker_info_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerActors::CoreActor, self.previous_aruco_info.back().unwrap().clone());
+    }
+
+    fn send_vision_finalized(&self) {
+
     }
 
     fn handle_attention(&mut self) {

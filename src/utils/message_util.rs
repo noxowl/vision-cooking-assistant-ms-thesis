@@ -2,6 +2,7 @@ use std::sync::mpsc;
 use opencv::{core::Vector, types::VectorOfVectorOfPoint2f};
 use crate::smart_speaker::models::core_model::SmartSpeakerState;
 use crate::smart_speaker::models::intent_model::{IntentAction, IntentSlot};
+use crate::smart_speaker::models::vision_model::{VisionAction, VisionSlot};
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
 pub(crate) enum SmartSpeakerActors {
@@ -34,6 +35,8 @@ pub(crate) enum SmartSpeakerMessage {
     RequestMarkerInfo(RequestMarkerInfo),
     RequestQuery(QueryMessage),
     RequestActorGenerate(RequestActorGenerate),
+    RequestVisionAction(RequestVisionAction),
+    RequestTextToSpeech(StringMessage),
     ForceActivate(ForceActivate),
 }
 
@@ -116,6 +119,13 @@ pub(crate) struct RequestActorGenerate {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub(crate) struct RequestVisionAction {
+    pub send_from: SmartSpeakerActors,
+    pub send_to: SmartSpeakerActors,
+    pub actions: Vec<VisionAction>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct IntentFinalized {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
@@ -124,23 +134,41 @@ pub(crate) struct IntentFinalized {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub(crate) struct VisionFinalized {
+    pub send_from: SmartSpeakerActors,
+    pub send_to: SmartSpeakerActors,
+    pub result: ProcessResult,
+    pub contents: Vec<VisionContent>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) struct IntentContent {
     pub intent: IntentAction,
     pub entities: Vec<Box<dyn IntentSlot>>,
 }
 
-#[derive(Debug, Clone, PartialEq)]
-pub(crate) struct VisionFinalized {
-    pub send_from: SmartSpeakerActors,
-    pub send_to: SmartSpeakerActors,
-    pub result: ProcessResult,
-    pub content: VisionContent,
+impl IntentContent {
+    pub(crate) fn new(intent: IntentAction, entities: Vec<Box<dyn IntentSlot>>) -> Self {
+        IntentContent {
+            intent,
+            entities,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) struct VisionContent {
-    pub gaze_info: (f32, f32),
-    pub marker_info: (Vec<Vec<(f32, f32)>>, Vec<i32>),
+    pub action: VisionAction,
+    pub entities: Vec<Box<dyn VisionSlot>>,
+}
+
+impl VisionContent {
+    pub(crate) fn new(action: VisionAction, entities: Vec<Box<dyn VisionSlot>>) -> Self {
+        VisionContent {
+            action,
+            entities,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -305,6 +333,55 @@ pub(crate) fn intent_finalized_message(sender: &mpsc::Sender<SmartSpeakerMessage
         send_to,
         result,
         content
+    })) {
+        Ok(_) => {}
+        Err(e) => {
+            println!("Error: {}", e);
+        }
+    }
+}
+
+pub(crate) fn vision_action_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
+                                    send_from: SmartSpeakerActors,
+                                    send_to: SmartSpeakerActors,
+                                    actions: Vec<VisionAction>) {
+    match sender.send(SmartSpeakerMessage::RequestVisionAction(RequestVisionAction {
+        send_from,
+        send_to,
+        actions
+    })) {
+        Ok(_) => {}
+        Err(e) => {
+            println!("Error: {}", e);
+        }
+    }
+}
+
+pub(crate) fn vision_finalized_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
+                                       send_from: SmartSpeakerActors,
+                                       send_to: SmartSpeakerActors,
+                                       result: ProcessResult, contents: Vec<VisionContent>) {
+    match sender.send(SmartSpeakerMessage::VisionFinalized(VisionFinalized {
+        send_from,
+        send_to,
+        result,
+        contents
+    })) {
+        Ok(_) => {}
+        Err(e) => {
+            println!("Error: {}", e);
+        }
+    }
+}
+
+pub(crate) fn text_to_speech_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
+                                     send_from: SmartSpeakerActors,
+                                     send_to: SmartSpeakerActors,
+                                     message: String) {
+    match sender.send(SmartSpeakerMessage::RequestTextToSpeech(StringMessage {
+        send_from,
+        send_to,
+        message,
     })) {
         Ok(_) => {}
         Err(e) => {

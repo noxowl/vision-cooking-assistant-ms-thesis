@@ -1,5 +1,8 @@
-use opencv::core::Mat;
+use std::fmt;
+use std::fmt::{Debug, Formatter};
+use opencv::core::{Mat, Point2f};
 use anyhow::Result;
+use opencv::types::{VectorOfPoint2f, VectorOfVectorOfPoint2f};
 use crate::utils::camera_util::Camera;
 use crate::utils::pupil_util::Pupil;
 use crate::utils::vision_util::VisionType;
@@ -123,3 +126,85 @@ impl CaptureSource for CameraCaptureSource {
 //         }
 //     }
 // }
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum DetectableObject {
+    Carrot,
+    HumanSkin,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum VisionAction {
+    None,
+    ObjectDetectionWithAruco(DetectableObject),
+}
+
+pub(crate) trait VisionSlot: Send {
+    fn clone_box(&self) -> Box<dyn VisionSlot>;
+    fn as_any(&self) -> &dyn std::any::Any;
+}
+
+impl Debug for dyn VisionSlot {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        write!(f, "IntentSlot")
+    }
+}
+
+impl PartialEq for dyn VisionSlot {
+    fn eq(&self, other: &Self) -> bool {
+        true
+    }
+}
+
+impl Clone for Box<dyn VisionSlot> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct VisionObject {
+    pub(crate) object_type: DetectableObject,
+    pub(crate) size: VisionObjectSize,
+}
+
+impl VisionObject {
+    pub(crate) fn new(object_type: DetectableObject, size: VisionObjectSize) -> Self {
+        Self {
+            object_type,
+            size
+        }
+    }
+}
+
+impl VisionSlot for VisionObject {
+    fn clone_box(&self) -> Box<dyn VisionSlot> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct VisionObjectSize {
+    pub(crate) perimeter: f32,
+    pub(crate) width: f32,
+    pub(crate) height: f32,
+}
+
+impl VisionObjectSize {
+    pub(crate) fn new(perimeter: f32, width: f32, height: f32) -> Self {
+        Self {
+            perimeter,
+            width,
+            height,
+        }
+    }
+}
+
+// #[derive(Debug, Clone, PartialEq)]
+// pub(crate) enum VisionObject {
+// }
+
