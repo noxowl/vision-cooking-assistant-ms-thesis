@@ -18,22 +18,30 @@ PICOVOICE_MIC_INDEX=indexhere
 ### Milestone
 * Actors
   * [X] Core actor (message center)
+    * [X] Unit test
   * [X] Audio actor
+    * [X] Unit test
   * [X] Wake word actor
+    * [ ] Unit test
     * [X] Picovoice Porcupine
   * [X] Speech to intents actor
+    * [ ] Unit test
     * [X] Picovoice Rhino
   * [X] Voice activity detection actor
     * [X] Picovoice Cobra
   * [X] Text to speech actor
+    * [ ] Unit test
   * [X] Camera actor
+    * [X] Unit test
     * [X] Get frame from webcam
     * [X] Get frame from pupil labs (zmq)
   * [X] Computer Vision actor
+    * [X] Unit test
     * [X] ArUco Marker detection
     * [X] Simple Object detection (based on colour. replace to YOLOv5?)
     * [X] Measure object size (Based on ArUco Marker)
   * [X] Gaze actor
+    * [ ] Unit test
     * [X] Get gaze from pupil labs (zmq)
     * [X] Get gaze from frame center (fallback)
   * [ ] Context actor
