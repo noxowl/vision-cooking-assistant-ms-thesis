@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.48"
-opencv = { version = "0.84.5", default-features = true }
+opencv = { version = "0.86.1", default-features = true }
 rgb = "0.8.23"
 #linfa = "0.6.0"
 zmq = "0.10.0"
