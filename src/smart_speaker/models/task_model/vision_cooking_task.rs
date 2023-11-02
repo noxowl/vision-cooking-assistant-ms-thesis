@@ -1,4 +1,3 @@
-use std::fmt;
 use std::fmt::{Debug, Formatter};
 use anyhow::{anyhow, Result};
 use crate::smart_speaker::models::core_model::PendingType;
@@ -8,7 +7,7 @@ use crate::smart_speaker::models::step_model::generic_step::StepExecutable;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, Task};
 use crate::utils::message_util::{Content, IntentContent, VisionContent};
 
-pub(crate) struct CookingTask {
+pub(crate) struct VisionCookingTask {
     pub(crate) menu: IntentCookingMenu,
     pub(crate) step: Vec<CookingStep>,
     pub(crate) current_step: usize,
@@ -17,12 +16,12 @@ pub(crate) struct CookingTask {
     pub(crate) checkpoint: usize,
 }
 
-impl CookingTask {
+impl VisionCookingTask {
     pub(crate) fn new(content: IntentContent) -> Result<Self> {
         match content.entities.get(0) {
             None => { Err(anyhow!("failed")) }
             Some(entity) => {
-                Ok(CookingTask {
+                Ok(VisionCookingTask {
                     menu: entity.as_any().downcast_ref::<IntentCookingMenu>().unwrap().clone(),
                     step: vec![],
                     current_step: 0,
@@ -39,7 +38,7 @@ impl CookingTask {
     }
 }
 
-impl Task for CookingTask {
+impl Task for VisionCookingTask {
     fn init(&mut self) -> Result<SmartSpeakerTaskResult> {
         dbg!("cooking task init");
         Ok(SmartSpeakerTaskResult::new(SmartSpeakerTaskResultCode::Wait(PendingType::Speak)))

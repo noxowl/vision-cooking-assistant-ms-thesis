@@ -1,3 +1,11 @@
+use std::fmt::{Debug};
+use anyhow::Result;
+use crate::smart_speaker::models::core_model::PendingType;
+use crate::smart_speaker::models::step_model::generic_step::StepExecutable;
+use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode};
+use crate::smart_speaker::models::vision_model::{VisionAction, VisionObject};
+use crate::utils::message_util::{Content, IntentContent, VisionContent};
+
 #[derive(Debug, Clone)]
 pub(crate) struct CookingStep {
     pub(crate) waiting_for: PendingType,
@@ -21,58 +29,27 @@ pub(crate) enum CookingAction {
     WaitForVision(Box<dyn StepExecutable>),
 }
 
-
-pub(crate) trait StepExecutable: Send {
-    fn execute(&self) -> Result<SmartSpeakerTaskResultCodes>;
-    fn feed(&mut self, content: Box<dyn Content>) -> Result<()>;
-    fn clone_box(&self) -> Box<dyn StepExecutable>;
-    fn as_any(&self) -> &dyn std::any::Any;
-}
-
-impl Debug for dyn StepExecutable {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "StepExecutables")
-    }
-}
-
-impl PartialEq for dyn StepExecutable {
-    fn eq(&self, other: &Self) -> bool {
-        true
-    }
-}
-
-impl Clone for Box<dyn StepExecutable> {
-    fn clone(&self) -> Self {
-        self.clone_box()
-    }
-}
-
 #[derive(Debug, Clone)]
 pub(crate) struct ExplainStepExecutable {
-    pub(crate) text: String,
+    pub(crate) tts_script: String,
     pub(crate) current_content: Option<IntentContent>,
 }
 
 impl ExplainStepExecutable {
     pub(crate) fn new(text: String) -> Self {
         ExplainStepExecutable {
-            text,
+            tts_script: "".to_string(),
             current_content: None,
         }
     }
 }
 
 impl StepExecutable for ExplainStepExecutable {
-    fn clone_box(&self) -> Box<dyn StepExecutable> {
-        Box::new(self.clone())
-    }
-
-    fn as_any(&self) -> &dyn std::any::Any {
-        self
-    }
-
-    fn execute(&self) -> Result<SmartSpeakerTaskResultCodes> {
-        Ok(SmartSpeakerTaskResultCodes::Exit(self.text.clone()))
+    fn execute(&self) -> Result<SmartSpeakerTaskResult> {
+        Ok(SmartSpeakerTaskResult::with_tts(
+            SmartSpeakerTaskResultCode::Exit,
+            self.tts_script.clone(),
+        ))
     }
 
     fn feed(&mut self, content: Box<dyn Content>) -> Result<()> {
@@ -84,10 +61,19 @@ impl StepExecutable for ExplainStepExecutable {
         }
         Ok(())
     }
+
+    fn clone_box(&self) -> Box<dyn StepExecutable> {
+        Box::new(self.clone())
+    }
+
+    fn as_any(&self) -> &dyn std::any::Any {
+        self
+    }
 }
 
 #[derive(Debug, Clone)]
 pub(crate) struct WaitForVisionStepExecutables {
+    pub(crate) tts_script: String,
     pub(crate) vision_action: VisionAction,
     pub(crate) current_content: Option<VisionContent>,
 }
@@ -95,33 +81,40 @@ pub(crate) struct WaitForVisionStepExecutables {
 impl WaitForVisionStepExecutables {
     pub(crate) fn new(vision_action: VisionAction) -> Self {
         WaitForVisionStepExecutables {
+            tts_script: "".to_string(),
             vision_action,
             current_content: None,
         }
     }
+
+    pub(crate) fn handle_vision_contents(&self, contents: &Vec<VisionObject>) -> Result<SmartSpeakerTaskResult> {
+        Ok(SmartSpeakerTaskResult::with_tts(
+            SmartSpeakerTaskResultCode::Wait(PendingType::Vision(vec![])),
+            self.tts_script.clone(),
+        ))
+    }
 }
 
 impl StepExecutable for WaitForVisionStepExecutables {
-    fn execute(&self) -> Result<SmartSpeakerTaskResultCodes> {
+    fn execute(&self) -> Result<SmartSpeakerTaskResult> {
         return match &self.current_content {
             None => {
-                Ok(SmartSpeakerTaskResultCodes::Wait(PendingType::Vision(vec![])))
+                Ok(SmartSpeakerTaskResult::with_tts(
+                    SmartSpeakerTaskResultCode::Wait(PendingType::Vision(vec![])),
+                    self.tts_script.clone(),
+                ))
             }
             Some(content) => {
                 match &content.action {
                     VisionAction::None => {
-                        Ok(SmartSpeakerTaskResultCodes::Wait(PendingType::Vision(vec![])))
+                        Ok(SmartSpeakerTaskResult::with_tts(
+                            SmartSpeakerTaskResultCode::Wait(PendingType::Vision(vec![])),
+                            self.tts_script.clone(),
+                        ))
                     }
                     VisionAction::ObjectDetectionWithAruco(detectable) => {
-                        for content in &content.entities {
-                            match content.as_any().downcast_ref::<VisionObject>() {
-                                None => {
-                                }
-                                Some(vision_object) => {
-                                }
-                            }
-                        }
-                        Ok(SmartSpeakerTaskResultCodes::Wait(PendingType::Vision(vec![])))
+                        self.handle_vision_contents(
+                            &content.entities.iter().map(|c| c.as_any().downcast_ref::<VisionObject>().unwrap().clone()).collect::<Vec<VisionObject>>())
                     }
                 }
             }

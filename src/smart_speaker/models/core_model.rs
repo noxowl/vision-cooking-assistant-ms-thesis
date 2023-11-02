@@ -13,7 +13,7 @@ impl Display for SmartSpeakerState {
         match self {
             SmartSpeakerState::Idle => write!(f, "Idle"),
             SmartSpeakerState::Attention => write!(f, "Attention"),
-            SmartSpeakerState::Pending(pending_type) => write!(f, "Pending({})", pending_type),
+            SmartSpeakerState::Pending(pending_type) => write!(f, "Pending({})", &pending_type),
         }
     }
 }
@@ -28,7 +28,7 @@ impl Display for PendingType {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
             PendingType::Speak => write!(f, "Speak"),
-            PendingType::Vision(VisionAction) => write!(f, "Vision"),
+            PendingType::Vision(actions) => write!(f, "Vision({:?})", &actions),
         }
     }
 }

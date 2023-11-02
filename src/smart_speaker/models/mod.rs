@@ -8,3 +8,4 @@ pub(crate) mod marker_model;
 pub(crate) mod context_model;
 pub(crate) mod core_model;
 pub(crate) mod task_model;
+pub(crate) mod step_model;

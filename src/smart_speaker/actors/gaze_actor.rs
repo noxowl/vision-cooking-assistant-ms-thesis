@@ -2,8 +2,7 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 use crate::smart_speaker::models::gaze_model::Gaze;
-use crate::utils::message_util;
-use crate::utils::message_util::{RequestGazeInfo, SmartSpeakerActors, SmartSpeakerMessage};
+use crate::utils::message_util::{self, RequestGazeInfo, SmartSpeakerActors, SmartSpeakerMessage};
 
 pub(crate) struct GazeActor {
     alive: bool,

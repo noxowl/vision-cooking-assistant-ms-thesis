@@ -1,33 +1,29 @@
 use anyhow::Result;
 use crate::smart_speaker::models::core_model::PendingType;
 use crate::smart_speaker::models::intent_model::IntentAction;
-use crate::smart_speaker::models::task_model::cooking_task::StepAction;
-use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResultCodes, Task};
+use crate::smart_speaker::models::step_model::generic_step::{GenericAction, GenericStep};
+use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, Task};
 use crate::smart_speaker::models::vision_model::{VisionAction, VisionObject};
 use crate::utils::message_util::{Content, IntentContent, VisionContent};
 
-pub(crate) struct ViewingTask {
-    pub(crate) step: Vec<StepAction>,
+pub(crate) struct VisionViewingTask {
+    pub(crate) step: Vec<GenericStep>,
     pub(crate) current_step: i16,
     pub(crate) waiting_content: PendingType
 }
 
-impl ViewingTask {
+impl VisionViewingTask {
     pub(crate) fn new(content: IntentContent) -> Result<Self> {
         todo!()
     }
 }
 
-impl Task for ViewingTask {
-    fn init(&mut self) -> Result<SmartSpeakerTaskResultCodes> {
-        Ok(SmartSpeakerTaskResultCodes::Wait(PendingType::Speak))
+impl Task for VisionViewingTask {
+    fn init(&mut self) -> Result<SmartSpeakerTaskResult> {
+        Ok(SmartSpeakerTaskResult::new(SmartSpeakerTaskResultCode::Wait(PendingType::Speak)))
     }
 
-    fn execute(&mut self) -> Result<SmartSpeakerTaskResultCodes> {
-        todo!()
-    }
-
-    fn try_next(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResultCodes> {
+    fn try_next(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {
         match content {
             None => {}
             Some(content) => {
@@ -63,11 +59,17 @@ impl Task for ViewingTask {
 
             }
         }
-        Ok(SmartSpeakerTaskResultCodes::Exit("viewing task next".to_string()))
+        Ok(SmartSpeakerTaskResult::with_tts(
+            SmartSpeakerTaskResultCode::Exit,
+            "viewing task next".to_string())
+        )
     }
 
-    fn failed(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResultCodes> {
-        Ok(SmartSpeakerTaskResultCodes::Exit("viewing task failed".to_string()))
+    fn failed(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {
+        Ok(SmartSpeakerTaskResult::with_tts(
+            SmartSpeakerTaskResultCode::Exit,
+            "viewing task failed".to_string())
+        )
     }
 
     fn internal_move_next(&mut self) -> Result<bool> {
@@ -78,7 +80,10 @@ impl Task for ViewingTask {
         todo!()
     }
 
-    fn exit(&self) -> Result<SmartSpeakerTaskResultCodes> {
-        Ok(SmartSpeakerTaskResultCodes::Exit("viewing task exit".to_string()))
+    fn exit(&self) -> Result<SmartSpeakerTaskResult> {
+        Ok(SmartSpeakerTaskResult::with_tts(
+            SmartSpeakerTaskResultCode::Exit,
+            "viewing task exit".to_string())
+        )
     }
 }

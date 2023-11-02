@@ -23,9 +23,6 @@ pub(crate) enum SmartSpeakerActors {
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum SmartSpeakerMessage {
     StringMessage(StringMessage),
-    // AttentionFinished(AttentionFinished),
-    IntentFinalized(IntentFinalized),
-    VisionFinalized(VisionFinalized),
     ReportTerminated(ReportTerminated),
     RequestShutdown(RequestShutdown),
     RequestAudioStream(RequestAudioStream),
@@ -36,7 +33,10 @@ pub(crate) enum SmartSpeakerMessage {
     RequestQuery(QueryMessage),
     RequestActorGenerate(RequestActorGenerate),
     RequestVisionAction(RequestVisionAction),
-    RequestTextToSpeech(StringMessage),
+    RequestTextToSpeech(TextToSpeechMessage),
+    IntentFinalized(IntentFinalized),
+    VisionFinalized(VisionFinalized),
+    TextToSpeechFinished(StringMessage),
     ForceActivate(ForceActivate),
 }
 
@@ -103,6 +103,19 @@ pub(crate) struct StringMessage {
     pub send_from: SmartSpeakerActors,
     pub send_to: SmartSpeakerActors,
     pub message: String,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct TextToSpeechMessage {
+    pub send_from: SmartSpeakerActors,
+    pub send_to: SmartSpeakerActors,
+    pub message: TextToSpeechMessageType,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum TextToSpeechMessageType {
+    Normal(String),
+    Boilerplate(usize),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -378,7 +391,39 @@ pub(crate) fn text_to_speech_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
                                      send_from: SmartSpeakerActors,
                                      send_to: SmartSpeakerActors,
                                      message: String) {
-    match sender.send(SmartSpeakerMessage::RequestTextToSpeech(StringMessage {
+    match sender.send(SmartSpeakerMessage::RequestTextToSpeech(TextToSpeechMessage {
+        send_from,
+        send_to,
+        message: TextToSpeechMessageType::Normal(message),
+    })) {
+        Ok(_) => {}
+        Err(e) => {
+            println!("Error: {}", e);
+        }
+    }
+}
+
+pub(crate) fn text_to_speech_boilerplate_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
+                                     send_from: SmartSpeakerActors,
+                                     send_to: SmartSpeakerActors,
+                                     index: usize) {
+    match sender.send(SmartSpeakerMessage::RequestTextToSpeech(TextToSpeechMessage {
+        send_from,
+        send_to,
+        message: TextToSpeechMessageType::Boilerplate(index),
+    })) {
+        Ok(_) => {}
+        Err(e) => {
+            println!("Error: {}", e);
+        }
+    }
+}
+
+pub(crate) fn text_to_speech_finished_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
+                                              send_from: SmartSpeakerActors,
+                                              send_to: SmartSpeakerActors,
+                                              message: String) {
+    match sender.send(SmartSpeakerMessage::TextToSpeechFinished(StringMessage {
         send_from,
         send_to,
         message,

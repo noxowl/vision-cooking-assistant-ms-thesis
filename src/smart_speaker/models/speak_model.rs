@@ -1,5 +1,6 @@
+use std::sync::mpsc;
 use anyhow::{anyhow, Result};
-use tts::{Tts, Features, Voice};
+use tts::{Tts, Features, Voice, UtteranceId, Error};
 #[cfg(target_os = "macos")]
 use cocoa_foundation::base::id;
 #[cfg(target_os = "macos")]
@@ -7,9 +8,11 @@ use cocoa_foundation::foundation::NSRunLoop;
 #[cfg(target_os = "macos")]
 use objc::{msg_send, sel, sel_impl};
 use crate::utils::config_util::LanguageTag;
+use crate::utils::message_util::{SmartSpeakerActors, SmartSpeakerMessage};
 
 pub(crate) struct MachineSpeech {
     app: Tts,
+    speaking: bool,
     pub language: LanguageTag // BCP 47
 }
 
@@ -17,6 +20,7 @@ impl MachineSpeech {
     pub(crate) fn new(language: LanguageTag) -> Self {
         Self {
             app: Tts::default().unwrap(),
+            speaking: false,
             language
         }
     }
@@ -45,8 +49,20 @@ impl MachineSpeech {
             utterance_callbacks,
             ..
         } = self.app.supported_features();
-        self.app.speak(text, false)?;
+        let result = self.app.speak(text, true);
         Ok(())
+    }
+
+    pub(crate) fn speak_with_callback(&mut self, text: String, callback_sender: mpsc::Sender<usize>) {
+        let Features {
+            is_speaking,
+            utterance_callbacks,
+            ..
+        } = self.app.supported_features();
+        let result = self.app.speak(text, true);
+        self.app.on_utterance_end(Some(Box::new(move |utterance_id: UtteranceId| {
+            callback_sender.send(0);
+        }))).unwrap();
     }
 }
 
@@ -55,6 +71,9 @@ pub(crate) enum MachineSpeechBoilerplate {
     WakeUp,
     Ok,
     Undefined,
+    Aborted,
+    IntentFailed,
+    VisionFailed,
 }
 
 impl MachineSpeechBoilerplate {
@@ -66,7 +85,7 @@ impl MachineSpeechBoilerplate {
             }.to_string(),
             Self::WakeUp => match language {
                 LanguageTag::Japanese => { "聞こえています。" }
-                _ => { "Listening." }
+                _ => { "I'm Listening." }
             }.to_string(),
             Self::Ok => match language {
                 LanguageTag::Japanese => { "分かりました。" }
@@ -76,6 +95,31 @@ impl MachineSpeechBoilerplate {
                 LanguageTag::Japanese => { "すみません。わからない命令です。" }
                 _ => { "Undefined command." }
             }.to_string(),
+            Self::Aborted => match language {
+                LanguageTag::Japanese => { "中止します。" }
+                _ => { "Stop the current operation." }
+            }.to_string(),
+            Self::IntentFailed => match language {
+                LanguageTag::Japanese => { "すみません。よく聞こえないです。もう一度おっしゃってください。" }
+                _ => { "Sorry. I can't hear you very well. Please repeat your message." }
+            }.to_string(),
+            Self::VisionFailed => match language {
+                LanguageTag::Japanese => { "すみません。よく見えないです。もう一度見せてください。" }
+                _ => { "Sorry. I can't see very well. Please show me again." }
+            }.to_string(),
+        }
+    }
+
+    pub(crate) fn try_from(index: usize) -> Result<Self> {
+        match index {
+            0 => Ok(Self::PowerOn),
+            1 => Ok(Self::WakeUp),
+            2 => Ok(Self::Ok),
+            3 => Ok(Self::Undefined),
+            4 => Ok(Self::Aborted),
+            5 => Ok(Self::IntentFailed),
+            6 => Ok(Self::VisionFailed),
+            _ => Err(anyhow!("invalid index"))
         }
     }
 }

@@ -1,23 +1,29 @@
-use std::sync::mpsc;
+use std::ops::Deref;
+use std::sync::{Arc, mpsc};
 use std::thread;
 use std::time::Duration;
 use crate::smart_speaker::models::speak_model::{MachineSpeech, MachineSpeechBoilerplate};
-use crate::utils::message_util::{RequestShutdown, SmartSpeakerMessage};
+use crate::utils::message_util::{self, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage, TextToSpeechMessageType};
 
 pub(crate) struct MachineSpeechActor {
     alive: bool,
     app: MachineSpeech,
     receiver: mpsc::Receiver<SmartSpeakerMessage>,
     sender: mpsc::Sender<SmartSpeakerMessage>,
+    callback_sender: mpsc::Sender<SmartSpeakerActors>,
+    callback_receiver: mpsc::Receiver<SmartSpeakerActors>
 }
 
 impl MachineSpeechActor {
     pub(crate) fn new(app: MachineSpeech, receiver: mpsc::Receiver<SmartSpeakerMessage>, sender: mpsc::Sender<SmartSpeakerMessage>) -> Self {
+        let (tx, rx) = mpsc::channel();
         Self {
             alive: true,
             app,
             receiver,
             sender,
+            callback_sender: tx,
+            callback_receiver: rx
         }
     }
 
@@ -25,8 +31,14 @@ impl MachineSpeechActor {
         println!("MachineSpeechActor started");
         self.app.init().unwrap();
         self.app.info();
-        self.speech(MachineSpeechBoilerplate::PowerOn.to_string_by_language(&self.app.language));
+        self.speech(TextToSpeechMessageType::Boilerplate(MachineSpeechBoilerplate::PowerOn as usize), Some(SmartSpeakerActors::CoreActor));
         while self.alive {
+            match self.callback_receiver.try_recv() {
+                Ok(actor) => {
+                    self.text_to_speech_finished_message(actor);
+                },
+                _ => {}
+            }
             match self.receiver.try_recv() {
                 Ok(message) => {
                     self.handle_message(message);
@@ -37,11 +49,24 @@ impl MachineSpeechActor {
         }
     }
 
-    fn speech(&mut self, text: String) {
-        match self.app.speak(text) {
-            Ok(_) => {},
-            Err(e) => {
-                dbg!(e);
+    fn speech(&mut self, message: TextToSpeechMessageType, request_from: Option<SmartSpeakerActors>) {
+        let (micro_tx, micro_rx) = mpsc::channel();
+        let mut speech_callback_actor = MachineSpeechCallbackMicroActor {
+            receiver: micro_rx,
+            sender: self.callback_sender.clone(),
+            message: request_from
+        };
+        thread::spawn(move || {
+            speech_callback_actor.run();
+        });
+        match message {
+            TextToSpeechMessageType::Normal(text) => {
+                self.app.speak_with_callback(text, micro_tx);
+            }
+            TextToSpeechMessageType::Boilerplate(index) => {
+                self.app.speak_with_callback(
+                    MachineSpeechBoilerplate::try_from(index).unwrap().to_string_by_language(&self.app.language),
+                    micro_tx);
             }
         }
     }
@@ -51,27 +76,50 @@ impl MachineSpeechActor {
             SmartSpeakerMessage::RequestShutdown(RequestShutdown {}) => {
                 self.alive = false;
             },
-            // SmartSpeakerMessage::RequestStateUpdate(_) => {
-            //     self.speech(MachineSpeechBoilerplate::WakeUp.to_string_by_language(&self.app.language));
-            // },
-            // SmartSpeakerMessage::AttentionFinished(AttentionFinished { send_from: _, send_to: _, result }) => {
-            //     match result {
-            //         AttentionResult::Success => {
-            //             self.speech(MachineSpeechBoilerplate::Ok.to_string_by_language(&self.app.language));
-            //         },
-            //         AttentionResult::Failure => {
-            //             self.speech(MachineSpeechBoilerplate::Undefined.to_string_by_language(&self.app.language));
-            //         }
-            //     }
-            // },
             SmartSpeakerMessage::RequestTextToSpeech(message) => {
-                self.speech(message.message);
+                self.speech(message.message, Some(message.send_from));
             },
             SmartSpeakerMessage::StringMessage(message) => {
-                self.speech(message.message);
+                self.speech(TextToSpeechMessageType::Normal(message.message), None);
             },
             _ => {
                 dbg!("unhandled message");
+            }
+        }
+    }
+
+    fn text_to_speech_finished_message(&mut self, request_from: SmartSpeakerActors) {
+        message_util::text_to_speech_finished_message(
+            &self.sender,
+            SmartSpeakerActors::MachineSpeechActor,
+            request_from,
+            "".to_string()
+        )
+    }
+}
+
+fn text_to_speech_finished_message(sender: mpsc::Sender<SmartSpeakerMessage>, request_from: SmartSpeakerActors) {
+    message_util::text_to_speech_finished_message(
+        &sender,
+        SmartSpeakerActors::MachineSpeechActor,
+        request_from,
+        "".to_string()
+    )
+}
+
+pub(crate) struct MachineSpeechCallbackMicroActor {
+    receiver: mpsc::Receiver<usize>,
+    sender: mpsc::Sender<SmartSpeakerActors>,
+    message: Option<SmartSpeakerActors>
+}
+
+impl MachineSpeechCallbackMicroActor {
+    fn run(&mut self) {
+        println!("MachineSpeechCallbackMicroActor started");
+        while let Ok(message) = self.receiver.recv() {
+            dbg!("MachineSpeechCallbackMicroActor received message");
+            if let Some(actor) = &self.message {
+                self.sender.send(actor.clone()).unwrap();
             }
         }
     }

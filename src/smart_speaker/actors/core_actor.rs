@@ -17,10 +17,10 @@ use crate::smart_speaker::models::core_model::{PendingType, SmartSpeakerState};
 use crate::smart_speaker::models::debug_model::DebugData;
 use crate::smart_speaker::models::gaze_model::Gaze;
 use crate::smart_speaker::models::mic_model::{AudioListener, SpeechToIntent, VoiceActivityDetector, WakeWordDetector};
-use crate::smart_speaker::models::speak_model::MachineSpeech;
+use crate::smart_speaker::models::speak_model::{MachineSpeech, MachineSpeechBoilerplate};
 use crate::smart_speaker::models::vision_model::Capture;
 use crate::utils::config_util::Config;
-use crate::utils::message_util::{QueryMessage, ReportTerminated, RequestStateUpdate, RequestAudioStream, RequestCameraFrame, RequestGazeInfo, RequestMarkerInfo, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage, StringMessage, IntentFinalized, ProcessResult, VisionFinalized};
+use crate::utils::message_util::{QueryMessage, ReportTerminated, RequestStateUpdate, RequestAudioStream, RequestCameraFrame, RequestGazeInfo, RequestMarkerInfo, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage, StringMessage, IntentFinalized, ProcessResult, VisionFinalized, RequestVisionAction, TextToSpeechMessage, TextToSpeechMessageType};
 use crate::utils::vision_util;
 use crate::utils::vision_util::VisionType;
 
@@ -279,6 +279,13 @@ impl CoreActorMessageHandler {
                 }
                 match send_from {
                     SmartSpeakerActors::WakeWordActor => {
+                        if let Some(sender) = senders.get(&SmartSpeakerActors::MachineSpeechActor) {
+                            sender.send(SmartSpeakerMessage::RequestTextToSpeech(TextToSpeechMessage {
+                                send_from: SmartSpeakerActors::WakeWordActor,
+                                send_to: SmartSpeakerActors::MachineSpeechActor,
+                                message: TextToSpeechMessageType::Boilerplate(MachineSpeechBoilerplate::WakeUp as usize),
+                            })).expect("TODO: panic message");
+                        }
                         if senders.get(&SmartSpeakerActors::SpeechToIntentActor).is_none() {
                             return CoreActorState::NewActorRequested {
                                 actor: SmartSpeakerActors::SpeechToIntentActor,
@@ -316,10 +323,10 @@ impl CoreActorMessageHandler {
                                     }
                                     PendingType::Vision(action) => {
                                         if let Some(sender) = senders.get(&SmartSpeakerActors::VisionActor) {
-                                            sender.send(SmartSpeakerMessage::RequestStateUpdate(RequestStateUpdate {
+                                            sender.send(SmartSpeakerMessage::RequestVisionAction(RequestVisionAction {
                                                 send_from: SmartSpeakerActors::CoreActor,
                                                 send_to: SmartSpeakerActors::VisionActor,
-                                                state: SmartSpeakerState::Attention,
+                                                actions: action,
                                             })).expect("TODO: panic message");
                                         }
                                     }
@@ -337,6 +344,16 @@ impl CoreActorMessageHandler {
                 //         state: SmartSpeakerState::Attention,
                 //     })).expect("TODO: panic message");
                 // }
+                CoreActorState::WaitForNextMessage {}
+            },
+            SmartSpeakerMessage::RequestTextToSpeech(TextToSpeechMessage { send_from, send_to, message }) => {
+                if let Some(sender) = senders.get(&SmartSpeakerActors::MachineSpeechActor) {
+                    sender.send(SmartSpeakerMessage::RequestTextToSpeech(TextToSpeechMessage {
+                        send_from: send_from,
+                        send_to: SmartSpeakerActors::MachineSpeechActor,
+                        message: message,
+                    })).expect("TODO: panic message");
+                }
                 CoreActorState::WaitForNextMessage {}
             },
             SmartSpeakerMessage::IntentFinalized(IntentFinalized { send_from, send_to, result, content }) => {
@@ -357,6 +374,17 @@ impl CoreActorMessageHandler {
                         send_to: SmartSpeakerActors::ContextActor,
                         result: result.clone(),
                         contents: contents.clone(),
+                    })).expect("TODO: panic message");
+                }
+                CoreActorState::WaitForNextMessage {}
+            },
+            SmartSpeakerMessage::TextToSpeechFinished(StringMessage{ send_from, send_to, message }) => {
+                dbg!("[CoreActor log] TextToSpeechFinished");
+                if let Some(sender) = senders.get(&SmartSpeakerActors::ContextActor) {
+                    sender.send(SmartSpeakerMessage::TextToSpeechFinished(StringMessage {
+                        send_from: send_from,
+                        send_to: SmartSpeakerActors::ContextActor,
+                        message: message.clone(),
                     })).expect("TODO: panic message");
                 }
                 CoreActorState::WaitForNextMessage {}
