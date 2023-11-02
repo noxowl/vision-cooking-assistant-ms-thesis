@@ -31,6 +31,7 @@ PICOVOICE_MIC_INDEX=indexhere
     * [X] Picovoice Cobra
   * [X] Text to speech actor
     * [ ] Unit test
+    * [X] OnSpeechFinished callback (message)
   * [X] Camera actor
     * [X] Unit test
     * [X] Get frame from webcam
