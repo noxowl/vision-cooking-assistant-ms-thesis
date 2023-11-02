@@ -1,5 +1,5 @@
 use std::fmt::{Debug};
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use crate::smart_speaker::models::core_model::PendingType;
 use crate::smart_speaker::models::step_model::generic_step::StepExecutable;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode};
@@ -69,6 +69,10 @@ impl StepExecutable for ExplainStepExecutable {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+
+    fn try_expose_vision_actions(&self) -> Result<Vec<VisionAction>> {
+        Err(anyhow!("Not a vision action"))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -137,5 +141,9 @@ impl StepExecutable for WaitForVisionStepExecutables {
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn try_expose_vision_actions(&self) -> Result<Vec<VisionAction>> {
+        Ok(vec![self.vision_action.clone()])
     }
 }

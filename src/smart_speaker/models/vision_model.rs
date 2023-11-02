@@ -139,6 +139,15 @@ pub(crate) enum VisionAction {
     ObjectDetectionWithAruco(DetectableObject),
 }
 
+impl std::fmt::Display for VisionAction {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            VisionAction::None => write!(f, "None"),
+            VisionAction::ObjectDetectionWithAruco(detectable) => write!(f, "ObjectDetectionWithAruco({:?})", detectable),
+        }
+    }
+}
+
 pub(crate) trait VisionSlot: Send {
     fn clone_box(&self) -> Box<dyn VisionSlot>;
     fn as_any(&self) -> &dyn std::any::Any;

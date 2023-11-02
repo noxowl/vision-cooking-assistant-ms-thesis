@@ -71,7 +71,7 @@ impl ContextActor {
             IntentAction::WhatYouSee => {
                 if self.vision {
                     println!("start vision viewing task");
-                    self.current_task = Some(Box::new(VisionViewingTask::new(content).unwrap()))
+                    self.current_task = Some(Box::new(VisionViewingTask::new().unwrap()))
                 }
             }
             IntentAction::CookingTask => {

@@ -286,12 +286,6 @@ impl CoreActorMessageHandler {
                                 message: TextToSpeechMessageType::Boilerplate(MachineSpeechBoilerplate::WakeUp as usize),
                             })).expect("TODO: panic message");
                         }
-                        if senders.get(&SmartSpeakerActors::SpeechToIntentActor).is_none() {
-                            return CoreActorState::NewActorRequested {
-                                actor: SmartSpeakerActors::SpeechToIntentActor,
-                                custom_args: None,
-                            }
-                        }
                     },
                     SmartSpeakerActors::VoiceActivityDetectActor => {
                         if senders.get(&SmartSpeakerActors::SpeechToIntentActor).is_none() {
@@ -379,13 +373,26 @@ impl CoreActorMessageHandler {
                 CoreActorState::WaitForNextMessage {}
             },
             SmartSpeakerMessage::TextToSpeechFinished(StringMessage{ send_from, send_to, message }) => {
-                dbg!("[CoreActor log] TextToSpeechFinished");
-                if let Some(sender) = senders.get(&SmartSpeakerActors::ContextActor) {
-                    sender.send(SmartSpeakerMessage::TextToSpeechFinished(StringMessage {
-                        send_from: send_from,
-                        send_to: SmartSpeakerActors::ContextActor,
-                        message: message.clone(),
-                    })).expect("TODO: panic message");
+                dbg!("[CoreActor log] TextToSpeechFinished from {:?} to {:?}", &send_from, &send_to);
+                match &send_to {
+                    SmartSpeakerActors::WakeWordActor => {
+                        dbg!(senders.get(&SmartSpeakerActors::WakeWordActor).is_none());
+                        if senders.get(&SmartSpeakerActors::WakeWordActor).is_none() && senders.get(&SmartSpeakerActors::SpeechToIntentActor).is_none() {
+                            return CoreActorState::NewActorRequested {
+                                actor: SmartSpeakerActors::SpeechToIntentActor,
+                                custom_args: None,
+                            }
+                        }
+                    },
+                    _ => {
+                        if let Some(sender) = senders.get(&SmartSpeakerActors::ContextActor) {
+                            sender.send(SmartSpeakerMessage::TextToSpeechFinished(StringMessage {
+                                send_from: send_from,
+                                send_to: SmartSpeakerActors::ContextActor,
+                                message: message.clone(),
+                            })).expect("TODO: panic message");
+                        }
+                    },
                 }
                 CoreActorState::WaitForNextMessage {}
             },

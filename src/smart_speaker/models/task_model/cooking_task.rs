@@ -46,105 +46,108 @@ impl Task for CookingTask {
     }
 
     fn try_next(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {
-        match content {
-            None => {
-                Ok(SmartSpeakerTaskResult::new(
+        Ok(SmartSpeakerTaskResult::new(
                     SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone()))
                 )
-            }
-            Some(c) => {
-                let _ = match c.as_any().downcast_ref::<IntentContent>() {
-                    None => {}
-                    Some(intent) => {
-                        match intent.intent {
-                            IntentAction::Cancel => {
-                                self.exit();
-                                return Ok(SmartSpeakerTaskResult::with_tts(
-                                    SmartSpeakerTaskResultCode::Exit,
-                                    "cooking task exit".to_string(),
-                                ))
-                            }
-                            _ => {
-                            }
-                        }
-                    }
-                };
-                let step = self.step.get_mut(self.current_step);
-                return match step {
-                    None => {
-                        Ok(SmartSpeakerTaskResult::with_tts(
-                            SmartSpeakerTaskResultCode::Exit,
-                            "cooking task exit".to_string(),
-                        ))
-                    }
-                    Some(step) => {
-                        match &mut step.action {
-                            CookingAction::None => {
-                                Ok(SmartSpeakerTaskResult::new(
-                                    SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
-                            }
-                            CookingAction::Explain(explain) => {
-                                Ok(explain.execute()?)
-                            }
-                            CookingAction::WaitForConfirm => {
-                                match c.as_any().downcast_ref::<IntentContent>() {
-                                    None => {
-                                        Ok(SmartSpeakerTaskResult::new(
-                                            SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
-                                    }
-                                    Some(intent) => {
-                                        match intent.intent {
-                                            IntentAction::Cancel => {
-                                                self.exit();
-                                                Ok(SmartSpeakerTaskResult::with_tts(
-                                                    SmartSpeakerTaskResultCode::Exit,
-                                                    "cooking task exit".to_string(),
-                                                ))
-                                            }
-                                            IntentAction::Confirm => {
-                                                match self.internal_move_next() {
-                                                    Ok(result) => {
-                                                        if result {
-                                                            Ok(SmartSpeakerTaskResult::new(
-                                                                SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
-                                                        } else {
-                                                            self.exit();
-                                                            Ok(SmartSpeakerTaskResult::with_tts(
-                                                                SmartSpeakerTaskResultCode::Exit,
-                                                                "cooking task exit".to_string(),
-                                                            ))
-                                                        }
-                                                    }
-                                                    Err(_) => {
-                                                        Err(anyhow!("failed to move next"))
-                                                    }
-                                                }
-                                            }
-                                            _ => {
-                                                Ok(SmartSpeakerTaskResult::new(SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                            CookingAction::WaitForVision(ref mut vision) => {
-                                match c.as_any().downcast_ref::<VisionContent>() {
-                                    None => {
-                                        Ok(SmartSpeakerTaskResult::new(
-                                            SmartSpeakerTaskResultCode::Wait(PendingType::Vision(vec![])))
-                                        )
-                                    }
-                                    Some(content) => {
-                                        vision.feed(Box::new(content.clone()));
-                                        Ok(vision.execute()?)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                };
-            }
-        }
+        // match content {
+        //     None => {
+        //         Ok(SmartSpeakerTaskResult::new(
+        //             SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone()))
+        //         )
+        //     }
+        //     Some(c) => {
+        //         let _ = match c.as_any().downcast_ref::<IntentContent>() {
+        //             None => {}
+        //             Some(intent) => {
+        //                 match intent.intent {
+        //                     IntentAction::Cancel => {
+        //                         self.exit();
+        //                         return Ok(SmartSpeakerTaskResult::with_tts(
+        //                             SmartSpeakerTaskResultCode::Exit,
+        //                             "cooking task exit".to_string(),
+        //                         ))
+        //                     }
+        //                     _ => {
+        //                     }
+        //                 }
+        //             }
+        //         };
+        //         let step = self.step.get_mut(self.current_step);
+        //         return match step {
+        //             None => {
+        //                 Ok(SmartSpeakerTaskResult::with_tts(
+        //                     SmartSpeakerTaskResultCode::Exit,
+        //                     "cooking task exit".to_string(),
+        //                 ))
+        //             }
+        //             Some(step) => {
+        //                 match &mut step.action {
+        //                     CookingAction::None => {
+        //                         Ok(SmartSpeakerTaskResult::new(
+        //                             SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
+        //                     }
+        //                     CookingAction::Explain(explain) => {
+        //                         Ok(explain.execute()?)
+        //                     }
+        //                     CookingAction::WaitForConfirm => {
+        //                         match c.as_any().downcast_ref::<IntentContent>() {
+        //                             None => {
+        //                                 Ok(SmartSpeakerTaskResult::new(
+        //                                     SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
+        //                             }
+        //                             Some(intent) => {
+        //                                 match intent.intent {
+        //                                     IntentAction::Cancel => {
+        //                                         self.exit();
+        //                                         Ok(SmartSpeakerTaskResult::with_tts(
+        //                                             SmartSpeakerTaskResultCode::Exit,
+        //                                             "cooking task exit".to_string(),
+        //                                         ))
+        //                                     }
+        //                                     IntentAction::Confirm => {
+        //                                         match self.internal_move_next() {
+        //                                             Ok(result) => {
+        //                                                 if result {
+        //                                                     Ok(SmartSpeakerTaskResult::new(
+        //                                                         SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
+        //                                                 } else {
+        //                                                     self.exit();
+        //                                                     Ok(SmartSpeakerTaskResult::with_tts(
+        //                                                         SmartSpeakerTaskResultCode::Exit,
+        //                                                         "cooking task exit".to_string(),
+        //                                                     ))
+        //                                                 }
+        //                                             }
+        //                                             Err(_) => {
+        //                                                 Err(anyhow!("failed to move next"))
+        //                                             }
+        //                                         }
+        //                                     }
+        //                                     _ => {
+        //                                         Ok(SmartSpeakerTaskResult::new(SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
+        //                                     }
+        //                                 }
+        //                             }
+        //                         }
+        //                     }
+        //                     CookingAction::WaitForVision(ref mut vision) => {
+        //                         match c.as_any().downcast_ref::<VisionContent>() {
+        //                             None => {
+        //                                 Ok(SmartSpeakerTaskResult::new(
+        //                                     SmartSpeakerTaskResultCode::Wait(PendingType::Vision(vec![])))
+        //                                 )
+        //                             }
+        //                             Some(content) => {
+        //                                 vision.feed(Box::new(content.clone()));
+        //                                 Ok(vision.execute()?)
+        //                             }
+        //                         }
+        //                     }
+        //                 }
+        //             }
+        //         };
+        //     }
+        // }
     }
 
     fn failed(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {

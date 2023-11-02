@@ -6,7 +6,7 @@ use bounded_vec_deque::BoundedVecDeque;
 use opencv::{core::Mat, core::Vector, types::VectorOfVectorOfPoint2f};
 use crate::smart_speaker::controllers::vision_controller;
 use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction, VisionObject, VisionSlot};
-use crate::utils::message_util::{camera_frame_message, gaze_info_message, marker_info_message, RequestCameraFrame, RequestGazeInfo, SmartSpeakerActors, SmartSpeakerMessage, RequestVisionAction, VisionContent};
+use crate::utils::message_util::{camera_frame_message, gaze_info_message, marker_info_message, RequestCameraFrame, RequestGazeInfo, SmartSpeakerActors, SmartSpeakerMessage, RequestVisionAction, VisionContent, vision_finalized_message, ProcessResult};
 
 pub(crate) struct VisionActor {
     alive: bool,
@@ -85,11 +85,14 @@ impl VisionActor {
                                 Ok(content) => {
                                     result.push(content);
                                 }
-                                Err(_) => {}
+                                Err(_) => {
+                                    self.send_vision_finalized(ProcessResult::Failure, vec![]);
+                                }
                             }
                         }
                     }
                 }
+                self.send_vision_finalized(ProcessResult::Success, result);
             },
             SmartSpeakerMessage::RequestStateUpdate(_) => {
                 self.attention = true;
@@ -165,8 +168,8 @@ impl VisionActor {
         marker_info_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerActors::CoreActor, self.previous_aruco_info.back().unwrap().clone());
     }
 
-    fn send_vision_finalized(&self) {
-
+    fn send_vision_finalized(&self, result: ProcessResult, contents: Vec<VisionContent>) {
+        vision_finalized_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerActors::ContextActor, result, contents);
     }
 
     fn handle_attention(&mut self) {

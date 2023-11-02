@@ -1,67 +1,65 @@
 use anyhow::Result;
 use crate::smart_speaker::models::core_model::PendingType;
 use crate::smart_speaker::models::intent_model::IntentAction;
-use crate::smart_speaker::models::step_model::generic_step::{GenericAction, GenericStep};
+use crate::smart_speaker::models::step_model::generic_step::{CountVisionObjectExecutable, GenericAction, GenericStep};
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, Task};
 use crate::smart_speaker::models::vision_model::{VisionAction, VisionObject};
 use crate::utils::message_util::{Content, IntentContent, VisionContent};
 
 pub(crate) struct VisionViewingTask {
     pub(crate) step: Vec<GenericStep>,
-    pub(crate) current_step: i16,
-    pub(crate) waiting_content: PendingType
+    pub(crate) current_step: usize,
 }
 
 impl VisionViewingTask {
-    pub(crate) fn new(content: IntentContent) -> Result<Self> {
-        todo!()
+    pub(crate) fn new() -> Result<Self> {
+        Ok(Self {
+            step: vec![
+                GenericStep::new(GenericAction::WaitForVision(Box::new(CountVisionObjectExecutable::new()))),
+            ],
+            current_step: 0,
+        })
     }
 }
 
 impl Task for VisionViewingTask {
     fn init(&mut self) -> Result<SmartSpeakerTaskResult> {
-        Ok(SmartSpeakerTaskResult::new(SmartSpeakerTaskResultCode::Wait(PendingType::Speak)))
+        Ok(SmartSpeakerTaskResult::new(
+            SmartSpeakerTaskResultCode::Wait(
+                self.step[*&self.current_step].waiting_for.clone()))
+        )
     }
 
     fn try_next(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {
+        let mut current_action: &GenericAction = &self.step[*&self.current_step].action;
         match content {
             None => {}
             Some(content) => {
-                match content.as_any().downcast_ref::<IntentContent>() {
-                    None => {}
-                    Some(intent) => {
-                        match intent.intent {
-                            IntentAction::Cancel => {
-                                return self.exit()
-                            }
-                            _ => {}
+                if let Some(intent_content) = content.as_any().downcast_ref::<IntentContent>() {
+                    match intent_content.intent {
+                        IntentAction::Cancel => {
+                            return self.exit()
                         }
+                        _ => {}
                     }
                 }
 
-                match content.as_any().downcast_ref::<VisionContent>() {
-                    None => {}
-                    Some(vision) => {
-                        match &vision.action {
-                            VisionAction::None => {}
-                            VisionAction::ObjectDetectionWithAruco(detectable) => {
-                                for content in &vision.entities {
-                                    match content.as_any().downcast_ref::<VisionObject>() {
-                                        None => {}
-                                        Some(vision_object) => {
-                                        }
-                                    }
-                                }
-                            }
+                if let Some(vision_content) = content.as_any().downcast_ref::<VisionContent>() {
+                    match &mut current_action {
+                        GenericAction::WaitForVision( executable) => {
+                            let mut exe = executable.clone();
+                            exe.feed(Box::new(vision_content.clone()))?;
+                            let result = exe.execute();
+                            return result
                         }
+                        _ => {}
                     }
                 }
-
             }
         }
-        Ok(SmartSpeakerTaskResult::with_tts(
-            SmartSpeakerTaskResultCode::Exit,
-            "viewing task next".to_string())
+        Ok(SmartSpeakerTaskResult::new(
+            SmartSpeakerTaskResultCode::Wait(
+                self.step[*&self.current_step].waiting_for.clone()))
         )
     }
 
