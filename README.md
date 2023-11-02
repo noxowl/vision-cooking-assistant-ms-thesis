@@ -44,14 +44,14 @@ PICOVOICE_MIC_INDEX=indexhere
     * [ ] Unit test
     * [X] Get gaze from pupil labs (zmq)
     * [X] Get gaze from frame center (fallback)
-  * [ ] Context actor
+  * [X] Context actor
     * [X] Holding current context (task)
-    * [ ] Data flow for task
+    * [X] Data flow for task
   * [ ] Input actor (for debug. keyboard input)
   * [ ] Stream actor (for recording)
   * [ ] Query actor (deprecated. for RPC)
 * Task
-  * [ ] Task model base
+  * [X] Task model base
   * [ ] Cooking task structure
     * [ ] Ingredient revision model
     * [ ] (Cooking) Carrot salad
