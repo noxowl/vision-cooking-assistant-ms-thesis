@@ -1,11 +1,9 @@
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
-use anyhow::Result;
-use crate::smart_speaker::models::core_model::{PendingType, SmartSpeakerState};
+use crate::smart_speaker::models::core_model::SmartSpeakerState;
 use crate::smart_speaker::models::intent_model::IntentAction;
 use crate::smart_speaker::models::speak_model::MachineSpeechBoilerplate;
-use crate::smart_speaker::models::vision_model::{VisionAction};
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, Task, cooking_task::CookingTask, vision_cooking_task::VisionCookingTask, vision_viewing_task::VisionViewingTask, SmartSpeakerTaskResultCode};
 use crate::utils::message_util::{self, IntentContent, IntentFinalized, ProcessResult, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage, StringMessage, VisionContent, VisionFinalized};
 
@@ -210,15 +208,6 @@ impl ContextActor {
             SmartSpeakerActors::ContextActor,
             SmartSpeakerActors::MachineSpeechActor,
             index,
-        )
-    }
-
-    fn request_vision_action(&self, actions: Vec<VisionAction>) {
-        message_util::vision_action_message(
-            &self.sender,
-            SmartSpeakerActors::ContextActor,
-            SmartSpeakerActors::VisionActor,
-            actions,
         )
     }
 }

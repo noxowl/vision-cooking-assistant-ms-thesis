@@ -2,7 +2,7 @@ use pv_recorder::{Recorder, RecorderBuilder};
 use cobra::{Cobra};
 use rhino::{Rhino, RhinoBuilder, RhinoInference};
 use porcupine::{Porcupine, PorcupineBuilder, BuiltinKeywords};
-use cheetah::{Cheetah, CheetahBuilder};
+// use cheetah::{Cheetah, CheetahBuilder};
 use anyhow::{anyhow, Result};
 
 #[derive(Clone)]
@@ -44,7 +44,7 @@ pub(crate) struct WakeWordDetector {
 
 impl WakeWordDetector {
     pub fn new(api_key: String, context_path: String) -> Self {
-        if (context_path == "default") {
+        if context_path == "default" {
             Self {
                 app: PorcupineBuilder::new_with_keywords(api_key,
                                                          &[BuiltinKeywords::Jarvis, BuiltinKeywords::Alexa]).init().unwrap(),
@@ -132,21 +132,21 @@ impl SpeechToIntent {
     }
 }
 
-pub(crate) struct SpeechToText {
-    pub app: Cheetah,
-}
-
-impl SpeechToText {
-    pub fn new(api_key: &String) -> Self {
-        Self {
-            app: CheetahBuilder::new().access_key(api_key.clone()).init().unwrap(),
-        }
-    }
-
-    pub fn detect(&mut self, pcm: &Vec<i16>) -> Result<String> {
-        match self.app.process(pcm) {
-            Ok(text) => Ok(text.transcript),
-            Err(_) => Err(anyhow!("failed to process audio frame"))
-        }
-    }
-}
+// pub(crate) struct SpeechToText {
+//     pub app: Cheetah,
+// }
+//
+// impl SpeechToText {
+//     pub fn new(api_key: &String) -> Self {
+//         Self {
+//             app: CheetahBuilder::new().access_key(api_key.clone()).init().unwrap(),
+//         }
+//     }
+//
+//     pub fn detect(&mut self, pcm: &Vec<i16>) -> Result<String> {
+//         match self.app.process(pcm) {
+//             Ok(text) => Ok(text.transcript),
+//             Err(_) => Err(anyhow!("failed to process audio frame"))
+//         }
+//     }
+// }

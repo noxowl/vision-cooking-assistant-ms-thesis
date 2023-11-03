@@ -1,5 +1,5 @@
-use std::fmt::{Debug, Formatter};
-use anyhow::{anyhow, Error, Result};
+use std::fmt::Debug;
+use anyhow::Result;
 use crate::smart_speaker::models::core_model::PendingType;
 use crate::utils::message_util::{Content};
 
@@ -43,6 +43,7 @@ pub(crate) trait Task: Send {
     fn internal_move_next(&mut self) -> Result<bool>;
     fn internal_rollback(&mut self) -> Result<bool>;
     fn exit(&self) -> Result<SmartSpeakerTaskResult>;
+    fn cancel(&self) -> Result<SmartSpeakerTaskResult>;
 }
 
 

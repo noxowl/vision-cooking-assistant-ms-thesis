@@ -1,5 +1,4 @@
-use std::fmt;
-use std::fmt::{Debug, Formatter};
+use std::fmt::{self, Debug, Formatter};
 use anyhow::{anyhow, Result};
 use crate::smart_speaker::models::core_model::PendingType;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode};
@@ -42,7 +41,7 @@ impl Debug for dyn StepExecutable {
 }
 
 impl PartialEq for dyn StepExecutable {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, _: &Self) -> bool {
         true
     }
 }
@@ -70,7 +69,7 @@ pub(crate) struct DescribeExecutable {
 impl DescribeExecutable {
     pub(crate) fn new(text: String) -> Self {
         DescribeExecutable {
-            tts_script: "".to_string(),
+            tts_script: text,
             current_contents: None,
         }
     }

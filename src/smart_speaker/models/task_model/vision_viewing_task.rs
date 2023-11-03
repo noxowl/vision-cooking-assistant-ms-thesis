@@ -1,9 +1,7 @@
 use anyhow::Result;
-use crate::smart_speaker::models::core_model::PendingType;
 use crate::smart_speaker::models::intent_model::IntentAction;
 use crate::smart_speaker::models::step_model::generic_step::{CountVisionObjectExecutable, GenericAction, GenericStep};
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, Task};
-use crate::smart_speaker::models::vision_model::{VisionAction, VisionObject};
 use crate::utils::message_util::{Content, IntentContent, VisionContent};
 
 pub(crate) struct VisionViewingTask {
@@ -83,5 +81,12 @@ impl Task for VisionViewingTask {
             SmartSpeakerTaskResultCode::Exit,
             "viewing task exit".to_string())
         )
+    }
+
+    fn cancel(&self) -> Result<SmartSpeakerTaskResult> {
+        Ok(SmartSpeakerTaskResult::with_tts(
+            SmartSpeakerTaskResultCode::Cancelled,
+            "cooking task cancelled".to_string(),
+        ))
     }
 }

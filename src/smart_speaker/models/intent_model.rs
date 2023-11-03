@@ -14,7 +14,7 @@ impl Debug for dyn IntentSlot {
 }
 
 impl PartialEq for dyn IntentSlot {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, _: &Self) -> bool {
         true
     }
 }

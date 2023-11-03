@@ -1,7 +1,6 @@
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
-use cobra::Cobra;
 use crate::smart_speaker::models::core_model::SmartSpeakerState;
 use crate::smart_speaker::models::mic_model::VoiceActivityDetector;
 use crate::utils::message_util;

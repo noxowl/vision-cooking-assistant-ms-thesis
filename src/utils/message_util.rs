@@ -1,5 +1,4 @@
 use std::sync::mpsc;
-use opencv::{core::Vector, types::VectorOfVectorOfPoint2f};
 use crate::smart_speaker::models::core_model::SmartSpeakerState;
 use crate::smart_speaker::models::intent_model::{IntentAction, IntentSlot};
 use crate::smart_speaker::models::vision_model::{VisionAction, VisionSlot};
@@ -284,26 +283,26 @@ pub(crate) fn gaze_info_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
     }
 }
 
-pub(crate) fn marker_info_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
-                                  send_from: SmartSpeakerActors,
-                                  send_to: SmartSpeakerActors,
-                                  marker_info: (VectorOfVectorOfPoint2f, Vector<i32>)) {
-    match sender.send(SmartSpeakerMessage::RequestMarkerInfo(RequestMarkerInfo {
-        send_from,
-        send_to,
-        marker_info: (
-            marker_info.0.to_vec().into_iter()
-                .map(|x| x.to_vec().into_iter()
-                    .map(|point| (point.x, point.y)).collect()
-                ).collect(),
-            marker_info.1.to_vec()),
-    })) {
-        Ok(_) => {}
-        Err(e) => {
-            println!("Error: {}", e);
-        }
-    }
-}
+// pub(crate) fn marker_info_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
+//                                   send_from: SmartSpeakerActors,
+//                                   send_to: SmartSpeakerActors,
+//                                   marker_info: (VectorOfVectorOfPoint2f, Vector<i32>)) {
+//     match sender.send(SmartSpeakerMessage::RequestMarkerInfo(RequestMarkerInfo {
+//         send_from,
+//         send_to,
+//         marker_info: (
+//             marker_info.0.to_vec().into_iter()
+//                 .map(|x| x.to_vec().into_iter()
+//                     .map(|point| (point.x, point.y)).collect()
+//                 ).collect(),
+//             marker_info.1.to_vec()),
+//     })) {
+//         Ok(_) => {}
+//         Err(e) => {
+//             println!("Error: {}", e);
+//         }
+//     }
+// }
 
 pub(crate) fn state_update_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
                                    send_from: SmartSpeakerActors,
@@ -354,21 +353,21 @@ pub(crate) fn intent_finalized_message(sender: &mpsc::Sender<SmartSpeakerMessage
     }
 }
 
-pub(crate) fn vision_action_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
-                                    send_from: SmartSpeakerActors,
-                                    send_to: SmartSpeakerActors,
-                                    actions: Vec<VisionAction>) {
-    match sender.send(SmartSpeakerMessage::RequestVisionAction(RequestVisionAction {
-        send_from,
-        send_to,
-        actions
-    })) {
-        Ok(_) => {}
-        Err(e) => {
-            println!("Error: {}", e);
-        }
-    }
-}
+// pub(crate) fn vision_action_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
+//                                     send_from: SmartSpeakerActors,
+//                                     send_to: SmartSpeakerActors,
+//                                     actions: Vec<VisionAction>) {
+//     match sender.send(SmartSpeakerMessage::RequestVisionAction(RequestVisionAction {
+//         send_from,
+//         send_to,
+//         actions
+//     })) {
+//         Ok(_) => {}
+//         Err(e) => {
+//             println!("Error: {}", e);
+//         }
+//     }
+// }
 
 pub(crate) fn vision_finalized_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
                                        send_from: SmartSpeakerActors,

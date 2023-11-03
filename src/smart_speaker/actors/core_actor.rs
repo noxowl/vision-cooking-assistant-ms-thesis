@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
-use cobra::Cobra;
 use crate::smart_speaker::actors::audio_actor::AudioActor;
 use crate::smart_speaker::actors::camera_actor::CameraActor;
 use crate::smart_speaker::actors::context_actor::ContextActor;
@@ -20,7 +19,7 @@ use crate::smart_speaker::models::mic_model::{AudioListener, SpeechToIntent, Voi
 use crate::smart_speaker::models::speak_model::{MachineSpeech, MachineSpeechBoilerplate};
 use crate::smart_speaker::models::vision_model::Capture;
 use crate::utils::config_util::Config;
-use crate::utils::message_util::{QueryMessage, ReportTerminated, RequestStateUpdate, RequestAudioStream, RequestCameraFrame, RequestGazeInfo, RequestMarkerInfo, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage, StringMessage, IntentFinalized, ProcessResult, VisionFinalized, RequestVisionAction, TextToSpeechMessage, TextToSpeechMessageType};
+use crate::utils::message_util::{QueryMessage, ReportTerminated, RequestStateUpdate, RequestAudioStream, RequestCameraFrame, RequestGazeInfo, RequestMarkerInfo, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage, StringMessage, IntentFinalized, VisionFinalized, RequestVisionAction, TextToSpeechMessage, TextToSpeechMessageType};
 use crate::utils::vision_util;
 use crate::utils::vision_util::VisionType;
 

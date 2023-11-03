@@ -2,7 +2,6 @@ use std::str::FromStr;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
-use rhino::RhinoInference;
 use crate::smart_speaker::controllers::mic_controller;
 use crate::smart_speaker::models::intent_model::{IntentAction, IntentCookingMenu};
 use crate::smart_speaker::models::mic_model::SpeechToIntent;

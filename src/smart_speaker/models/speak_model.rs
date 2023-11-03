@@ -1,6 +1,6 @@
 use std::sync::mpsc;
 use anyhow::{anyhow, Result};
-use tts::{Tts, Features, Voice, UtteranceId, Error};
+use tts::{Tts, Features, Voice, UtteranceId};
 #[cfg(target_os = "macos")]
 use cocoa_foundation::base::id;
 #[cfg(target_os = "macos")]
@@ -8,11 +8,9 @@ use cocoa_foundation::foundation::NSRunLoop;
 #[cfg(target_os = "macos")]
 use objc::{msg_send, sel, sel_impl};
 use crate::utils::config_util::LanguageTag;
-use crate::utils::message_util::{SmartSpeakerActors, SmartSpeakerMessage};
 
 pub(crate) struct MachineSpeech {
     app: Tts,
-    speaking: bool,
     pub language: LanguageTag // BCP 47
 }
 
@@ -20,7 +18,6 @@ impl MachineSpeech {
     pub(crate) fn new(language: LanguageTag) -> Self {
         Self {
             app: Tts::default().unwrap(),
-            speaking: false,
             language
         }
     }
@@ -45,7 +42,6 @@ impl MachineSpeech {
 
     pub(crate) fn speak(&mut self, text: String) -> Result<()> {
         let Features {
-            is_speaking,
             utterance_callbacks,
             ..
         } = self.app.supported_features();
@@ -55,13 +51,12 @@ impl MachineSpeech {
 
     pub(crate) fn speak_with_callback(&mut self, text: String, callback_sender: mpsc::Sender<usize>) {
         let Features {
-            is_speaking,
             utterance_callbacks,
             ..
         } = self.app.supported_features();
         let result = self.app.speak(text, true);
         self.app.on_utterance_end(Some(Box::new(move |utterance_id: UtteranceId| {
-            callback_sender.send(0);
+            let _ = callback_sender.send(0);
         }))).unwrap();
     }
 }

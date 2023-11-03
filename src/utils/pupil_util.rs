@@ -70,16 +70,16 @@ impl PupilTopic {
         }
     }
 
-    pub fn get_topic(&self) -> String {
-        match self {
-            PupilTopic::WorldFrame => {
-                "frame.world".to_string()
-            }
-            PupilTopic::Gaze2D => {
-                "gaze.2d.0.".to_string()
-            }
-        }
-    }
+    // pub fn get_topic(&self) -> String {
+    //     match self {
+    //         PupilTopic::WorldFrame => {
+    //             "frame.world".to_string()
+    //         }
+    //         PupilTopic::Gaze2D => {
+    //             "gaze.2d.0.".to_string()
+    //         }
+    //     }
+    // }
 }
 
 pub(crate) struct Pupil {
@@ -190,7 +190,7 @@ impl PupilRemote {
         match self.sub.as_ref() {
             None => {}
             Some(socket) => {
-                let topic = socket.recv_string(0).unwrap().unwrap();
+                let _ = socket.recv_string(0).unwrap().unwrap(); // topic
                 let msg = socket.recv_bytes(0).unwrap();
                 let mut de = Deserializer::new(Cursor::new(&msg[..]));
                 let mut payload: PupilCameraPayload = Deserialize::deserialize(&mut de).unwrap();
@@ -210,7 +210,7 @@ impl PupilRemote {
         match self.sub.as_ref() {
             None => {}
             Some(socket) => {
-                let topic = socket.recv_string(0).unwrap().unwrap();
+                let _ = socket.recv_string(0).unwrap().unwrap(); // topic
                 let msg = socket.recv_bytes(0).unwrap();
                 let mut de = Deserializer::new(Cursor::new(&msg[..]));
                 let payload: Pupil3dGazePayload = Deserialize::deserialize(&mut de).unwrap();

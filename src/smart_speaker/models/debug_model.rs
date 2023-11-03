@@ -1,11 +1,8 @@
 use std::ops::Mul;
-use opencv::{prelude::*, highgui, core::Point2f, core::Vector, types::VectorOfPoint2f, types::VectorOfVectorOfPoint2f};
-use opencv::gapi::mask;
-use opencv::imgproc::min_area_rect;
+use opencv::{prelude::*, highgui, core::Point2f};
 use crate::smart_speaker::controllers::vision_controller;
 use crate::smart_speaker::controllers::debug_controller;
 use crate::smart_speaker::models::core_model::SmartSpeakerState;
-use crate::smart_speaker::models::marker_model::{IngredientMarker};
 use crate::smart_speaker::models::vision_model;
 use crate::utils::vision_util;
 

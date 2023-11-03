@@ -1,8 +1,7 @@
 use std::fmt;
 use std::fmt::{Debug, Formatter};
-use opencv::core::{Mat, Point2f};
+use opencv::core::Mat;
 use anyhow::Result;
-use opencv::types::{VectorOfPoint2f, VectorOfVectorOfPoint2f};
 use crate::utils::camera_util::Camera;
 use crate::utils::pupil_util::Pupil;
 use crate::utils::vision_util::VisionType;
@@ -160,7 +159,7 @@ impl Debug for dyn VisionSlot {
 }
 
 impl PartialEq for dyn VisionSlot {
-    fn eq(&self, other: &Self) -> bool {
+    fn eq(&self, _: &Self) -> bool {
         true
     }
 }

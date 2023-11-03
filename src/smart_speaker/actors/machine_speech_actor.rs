@@ -1,5 +1,4 @@
-use std::ops::Deref;
-use std::sync::{Arc, mpsc};
+use std::sync::{mpsc};
 use std::thread;
 use std::time::Duration;
 use crate::smart_speaker::models::speak_model::{MachineSpeech, MachineSpeechBoilerplate};
@@ -98,15 +97,6 @@ impl MachineSpeechActor {
     }
 }
 
-fn text_to_speech_finished_message(sender: mpsc::Sender<SmartSpeakerMessage>, request_from: SmartSpeakerActors) {
-    message_util::text_to_speech_finished_message(
-        &sender,
-        SmartSpeakerActors::MachineSpeechActor,
-        request_from,
-        "".to_string()
-    )
-}
-
 pub(crate) struct MachineSpeechCallbackMicroActor {
     receiver: mpsc::Receiver<usize>,
     sender: mpsc::Sender<SmartSpeakerActors>,
@@ -117,7 +107,7 @@ impl MachineSpeechCallbackMicroActor {
     fn run(&mut self) {
         println!("MachineSpeechCallbackMicroActor started");
         while let Ok(message) = self.receiver.recv() {
-            dbg!("MachineSpeechCallbackMicroActor received message");
+            dbg!("MachineSpeechCallbackMicroActor received message {}", message);
             if let Some(actor) = &self.message {
                 self.sender.send(actor.clone()).unwrap();
             }

@@ -1,12 +1,40 @@
-use std::fmt;
-use std::fmt::{Debug, Formatter};
 use anyhow::{anyhow, Result};
 use crate::smart_speaker::models::core_model::PendingType;
 use crate::smart_speaker::models::intent_model::{IntentAction, IntentCookingMenu};
 use crate::smart_speaker::models::step_model::cooking_step::{CookingAction, CookingStep};
 use crate::smart_speaker::models::step_model::generic_step::StepExecutable;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, Task};
-use crate::utils::message_util::{Content, IntentContent, VisionContent};
+use crate::utils::message_util::{Content, IntentContent};
+
+pub(crate) struct CookingTaskIngredient {
+    pub(crate) name: CookingTaskIngredientName,
+    pub(crate) unit: CookingTaskIngredientAmount,
+}
+
+pub(crate) enum CookingTaskIngredientName {
+    Salt,
+    Pepper,
+    Sugar,
+    SoySauce,
+    Miso,
+    Sake,
+    Mirin,
+    Carrot,
+    Onion,
+}
+
+pub(crate) enum CookingTaskIngredientAmount {
+    MilliGram(i32),
+    Milliliter(i32),
+    Piece(i32),
+}
+
+pub(crate) enum CookingTaskIngredientRevision {
+    Add(CookingTaskIngredient),
+    Remove(CookingTaskIngredient),
+    Update(CookingTaskIngredient),
+}
+
 
 pub(crate) struct CookingTask {
     pub(crate) menu: IntentCookingMenu,
@@ -176,40 +204,14 @@ impl Task for CookingTask {
             "cooking task exit".to_string(),
         ))
     }
+
+    fn cancel(&self) -> Result<SmartSpeakerTaskResult> {
+        Ok(SmartSpeakerTaskResult::with_tts(
+            SmartSpeakerTaskResultCode::Cancelled,
+            "cooking task cancelled".to_string(),
+        ))
+    }
 }
-
-
-
-pub(crate) struct CookingTaskIngredient {
-    pub(crate) name: CookingTaskIngredientName,
-    pub(crate) unit: CookingTaskIngredientAmount,
-}
-
-pub(crate) enum CookingTaskIngredientName {
-    Salt,
-    Pepper,
-    Sugar,
-    SoySauce,
-    Miso,
-    Sake,
-    Mirin,
-    Carrot,
-    Onion,
-}
-
-pub(crate) enum CookingTaskIngredientAmount {
-    MilliGram(i32),
-    Milliliter(i32),
-    Piece(i32),
-}
-
-pub(crate) enum CookingTaskIngredientRevision {
-    Add(CookingTaskIngredient),
-    Remove(CookingTaskIngredient),
-    Update(CookingTaskIngredient),
-}
-
-
 
 // pub(crate) struct Recipe {
 //     name: String,

@@ -1,8 +1,8 @@
 use anyhow::{anyhow, Result};
 use opencv::{objdetect, imgproc};
 use opencv::prelude::*;
-use opencv::core::{Point, Scalar, Vector, Size, Point2f};
-use opencv::types::{VectorOfi32, VectorOfPoint2f, VectorOfVectorOfPoint2f};
+use opencv::core::{Vector, Size, Point2f};
+use opencv::types::{VectorOfi32, VectorOfVectorOfPoint2f};
 use crate::smart_speaker::models::vision_model::{DetectableObject, VisionObjectSize};
 use crate::utils::vision_util;
 

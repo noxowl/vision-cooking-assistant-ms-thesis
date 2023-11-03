@@ -1,6 +1,6 @@
 use std::str::FromStr;
 use anyhow::{anyhow, Result};
-use opencv::core::{Point2f, in_range, Size, Point, bitwise_and, BORDER_DEFAULT, Vector, Rect2f, RotatedRect, Size2f, Point_};
+use opencv::core::{Point2f, in_range, Size, Point, bitwise_and, BORDER_DEFAULT, Vector, RotatedRect, Point_};
 use opencv::imgproc;
 use opencv::prelude::*;
 use opencv::types::{VectorOfPoint, VectorOfPoint2f, VectorOfVectorOfPoint, VectorOfVectorOfPoint2f};

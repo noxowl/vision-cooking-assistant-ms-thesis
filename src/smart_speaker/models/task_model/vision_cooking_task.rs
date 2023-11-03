@@ -1,10 +1,10 @@
-use std::fmt::{Debug, Formatter};
 use anyhow::{anyhow, Result};
 use crate::smart_speaker::models::core_model::PendingType;
 use crate::smart_speaker::models::intent_model::{IntentAction, IntentCookingMenu};
 use crate::smart_speaker::models::step_model::cooking_step::{CookingAction, CookingStep};
 use crate::smart_speaker::models::step_model::generic_step::StepExecutable;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, Task};
+use crate::smart_speaker::models::task_model::cooking_task::CookingTaskIngredient;
 use crate::utils::message_util::{Content, IntentContent, VisionContent};
 
 pub(crate) struct VisionCookingTask {
@@ -57,7 +57,7 @@ impl Task for VisionCookingTask {
                     Some(intent) => {
                         match intent.intent {
                             IntentAction::Cancel => {
-                                self.exit();
+                                let _ = self.exit();
                                 return Ok(SmartSpeakerTaskResult::with_tts(
                                     SmartSpeakerTaskResultCode::Exit,
                                     "cooking task exit".to_string(),
@@ -94,7 +94,7 @@ impl Task for VisionCookingTask {
                                     Some(intent) => {
                                         match intent.intent {
                                             IntentAction::Cancel => {
-                                                self.exit();
+                                                let _ = self.exit();
                                                 Ok(SmartSpeakerTaskResult::with_tts(
                                                     SmartSpeakerTaskResultCode::Exit,
                                                     "cooking task exit".to_string(),
@@ -107,7 +107,7 @@ impl Task for VisionCookingTask {
                                                             Ok(SmartSpeakerTaskResult::new(
                                                                 SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
                                                         } else {
-                                                            self.exit();
+                                                            let _ = self.exit();
                                                             Ok(SmartSpeakerTaskResult::with_tts(
                                                                 SmartSpeakerTaskResultCode::Exit,
                                                                 "cooking task exit".to_string(),
@@ -134,7 +134,7 @@ impl Task for VisionCookingTask {
                                         )
                                     }
                                     Some(content) => {
-                                        vision.feed(Box::new(content.clone()));
+                                        let _ = vision.feed(Box::new(content.clone()));
                                         Ok(vision.execute()?)
                                     }
                                 }
@@ -172,38 +172,17 @@ impl Task for VisionCookingTask {
             "cooking task exit".to_string(),
         ))
     }
+
+    fn cancel(&self) -> Result<SmartSpeakerTaskResult> {
+        Ok(SmartSpeakerTaskResult::with_tts(
+            SmartSpeakerTaskResultCode::Cancelled,
+            "cooking task cancelled".to_string(),
+        ))
+    }
 }
 
 
 
-pub(crate) struct CookingTaskIngredient {
-    pub(crate) name: CookingTaskIngredientName,
-    pub(crate) unit: CookingTaskIngredientAmount,
-}
-
-pub(crate) enum CookingTaskIngredientName {
-    Salt,
-    Pepper,
-    Sugar,
-    SoySauce,
-    Miso,
-    Sake,
-    Mirin,
-    Carrot,
-    Onion,
-}
-
-pub(crate) enum CookingTaskIngredientAmount {
-    MilliGram(i32),
-    Milliliter(i32),
-    Piece(i32),
-}
-
-pub(crate) enum CookingTaskIngredientRevision {
-    Add(CookingTaskIngredient),
-    Remove(CookingTaskIngredient),
-    Update(CookingTaskIngredient),
-}
 
 
 
