@@ -48,6 +48,9 @@ PICOVOICE_MIC_INDEX=indexhere
   * [X] Context actor
     * [X] Holding current context (task)
     * [X] Data flow for task
+  * [X] Logger Actor
+    * [ ] Unit test
+    * [X] Log message to file
   * [ ] Input actor (for debug. keyboard input)
   * [ ] Stream actor (for recording)
   * [ ] Query actor (deprecated. for RPC)
