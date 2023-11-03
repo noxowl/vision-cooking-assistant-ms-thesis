@@ -19,9 +19,12 @@ impl Capture {
         }
     }
 
-    pub fn info(&self) {
+    pub fn info(&self) -> String{
         if self.source.is_some() {
-            println!("Capture info: {:?}", self.source.as_ref().unwrap().get_vision_type());
+            format!("Capture info: {:?}", self.source.as_ref().unwrap().get_vision_type()).to_string()
+        }
+        else {
+            format!("Capture info: None").to_string()
         }
     }
 

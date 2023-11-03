@@ -3,7 +3,7 @@ mod audio_actor_tests {
     use std::sync::mpsc;
     use std::thread;
     use crate::smart_speaker::models::mic_model::AudioListener;
-    use crate::utils::message_util::{RequestAudioStream, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
+    use crate::utils::message_util::{RequestAudioStream, ShutdownMessage, SmartSpeakerActors, SmartSpeakerMessage};
     use super::super::audio_actor::*;
 
     #[test]
@@ -32,8 +32,8 @@ mod audio_actor_tests {
                 panic!("unexpected message");
             }
         }
-        actor_tx.send(SmartSpeakerMessage::RequestShutdown(RequestShutdown {})).expect("TODO: panic message");
-        actor_tx.send(SmartSpeakerMessage::RequestShutdown(RequestShutdown {})).expect("TODO: panic message");
+        actor_tx.send(SmartSpeakerMessage::RequestShutdown(ShutdownMessage {})).expect("TODO: panic message");
+        actor_tx.send(SmartSpeakerMessage::RequestShutdown(ShutdownMessage {})).expect("TODO: panic message");
         assert!(core_rx.try_recv().is_err());
     }
 }

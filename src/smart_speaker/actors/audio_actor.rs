@@ -3,7 +3,8 @@ use std::thread;
 use std::time::Duration;
 use crate::smart_speaker::models::mic_model::AudioListener;
 use crate::smart_speaker::controllers::mic_controller;
-use crate::utils::message_util::{audio_stream_message, RequestAudioStream, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage, StringMessage};
+use crate::smart_speaker::models::message_model::*;
+use crate::utils::message_util::*;
 
 pub(crate) struct AudioActor {
     alive: bool,
@@ -25,8 +26,8 @@ impl AudioActor {
     }
 
     pub(crate) fn run(&mut self) {
-        println!("AudioActor started");
-        self.core.info();
+        write_log_message(&self.sender, SmartSpeakerActors::AudioActor, SmartSpeakerLogMessageType::Info("AudioActor started".to_string()));
+        write_log_message(&self.sender, SmartSpeakerActors::AudioActor, SmartSpeakerLogMessageType::Info(self.core.info()));
         let _ = self.core.start();
         while self.alive {
             match mic_controller::listen_mic(&mut self.core) {
@@ -50,7 +51,7 @@ impl AudioActor {
 
     fn handle_message(&mut self, message: SmartSpeakerMessage) {
         match message {
-            SmartSpeakerMessage::RequestShutdown(RequestShutdown {}) => {
+            SmartSpeakerMessage::RequestShutdown(ShutdownMessage {}) => {
                 self.alive = false;
             },
             SmartSpeakerMessage::StringMessage(StringMessage { send_from, send_to: _, message: _ }) => {
@@ -60,7 +61,7 @@ impl AudioActor {
                     message: "pong".to_string(),
                 })).expect("TODO: panic message");
             },
-            SmartSpeakerMessage::RequestAudioStream(RequestAudioStream { send_from, send_to: _, stream: _ }) => {
+            SmartSpeakerMessage::RequestAudioStream(AudioStreamMessage { send_from, send_to: _, stream: _ }) => {
                 audio_stream_message(&self.sender, SmartSpeakerActors::AudioActor, send_from, self.stream.clone());
             }
             _ => {

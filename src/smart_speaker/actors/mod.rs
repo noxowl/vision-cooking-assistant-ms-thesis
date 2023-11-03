@@ -15,3 +15,4 @@ mod machine_speech_actor;
 mod context_actor;
 mod voice_activity_detect_actor;
 mod input_actor;
+mod logger_actor;

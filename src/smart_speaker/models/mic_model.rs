@@ -17,8 +17,9 @@ impl AudioListener {
         }
     }
 
-    pub fn info(&mut self) {
+    pub fn info(&mut self) -> String {
         dbg!(self.recorder.get_audio_devices().unwrap());
+        format!("{:?}", self.recorder.get_audio_devices().unwrap()).to_string()
     }
 
     pub fn start(&mut self) {
@@ -57,8 +58,8 @@ impl WakeWordDetector {
 
     }
 
-    pub fn info(&mut self) {
-        dbg!(self.app.version());
+    pub fn info(&mut self) -> String {
+        self.app.version().to_string()
     }
 
     pub fn detect(&mut self, pcm: &Vec<i16>) -> Result<bool> {
@@ -86,8 +87,8 @@ impl VoiceActivityDetector {
         }
     }
 
-    pub fn info(&mut self) {
-        dbg!(self.app.version());
+    pub fn info(&mut self) -> String {
+        self.app.version().to_string()
     }
 
     pub fn detect(&mut self, pcm: &Vec<i16>) -> Result<f32> {
@@ -109,8 +110,8 @@ impl SpeechToIntent {
         }
     }
 
-    pub fn info(&mut self) {
-        dbg!(self.app.context_info());
+    pub fn info(&mut self) -> String {
+        self.app.context_info().to_string()
     }
 
     pub fn get_inference(&mut self) -> Result<Option<RhinoInference>> {

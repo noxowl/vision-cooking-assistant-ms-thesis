@@ -4,7 +4,8 @@ use crate::smart_speaker::models::intent_model::{IntentAction, IntentCookingMenu
 use crate::smart_speaker::models::step_model::cooking_step::{CookingAction, CookingStep};
 use crate::smart_speaker::models::step_model::generic_step::StepExecutable;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, Task};
-use crate::utils::message_util::{Content, IntentContent};
+use crate::smart_speaker::models::message_model::*;
+use crate::utils::message_util::*;
 
 pub(crate) struct CookingTaskIngredient {
     pub(crate) name: CookingTaskIngredientName,

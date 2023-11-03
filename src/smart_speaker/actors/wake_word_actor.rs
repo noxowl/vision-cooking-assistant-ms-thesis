@@ -2,8 +2,8 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 use crate::smart_speaker::models::mic_model::WakeWordDetector;
-use crate::utils::message_util;
-use crate::utils::message_util::{RequestAudioStream, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
+use crate::smart_speaker::models::message_model::*;
+use crate::utils::message_util::*;
 use crate::smart_speaker::models::core_model::SmartSpeakerState;
 
 pub(crate) struct WakeWordActor {
@@ -26,8 +26,8 @@ impl WakeWordActor {
     }
 
     pub(crate) fn run(&mut self) {
-        println!("WakeWordActor started");
-        self.core.info();
+        write_log_message(&self.sender, SmartSpeakerActors::WakeWordActor, SmartSpeakerLogMessageType::Info("WakeWordActor started".to_string()));
+        write_log_message(&self.sender, SmartSpeakerActors::WakeWordActor, SmartSpeakerLogMessageType::Info(self.core.info()));
         while self.alive {
             match self.receiver.try_recv() {
                 Ok(message) => {
@@ -45,10 +45,10 @@ impl WakeWordActor {
 
      fn handle_message(&mut self, message: SmartSpeakerMessage) {
         match message {
-            SmartSpeakerMessage::RequestShutdown(RequestShutdown {}) => {
+            SmartSpeakerMessage::RequestShutdown(ShutdownMessage {}) => {
                 self.alive = false;
             },
-            SmartSpeakerMessage::RequestAudioStream(RequestAudioStream { send_from: _, send_to: _, stream }) => {
+            SmartSpeakerMessage::RequestAudioStream(AudioStreamMessage { send_from: _, send_to: _, stream }) => {
                 if self.stream_before != stream {
                     self.detect_wake_word(&stream);
                     self.stream_before = stream;
@@ -77,7 +77,7 @@ impl WakeWordActor {
     }
 
     fn request_audio_stream(&mut self) {
-        message_util::audio_stream_message(
+        audio_stream_message(
             &self.sender,
             SmartSpeakerActors::WakeWordActor,
             SmartSpeakerActors::AudioActor,
@@ -86,7 +86,7 @@ impl WakeWordActor {
     }
 
     fn request_attention(&mut self) {
-        message_util::state_update_message(
+        state_update_message(
             &self.sender,
             SmartSpeakerActors::WakeWordActor,
             SmartSpeakerActors::CoreActor,
@@ -95,7 +95,7 @@ impl WakeWordActor {
     }
 
     fn terminate(&mut self) {
-        message_util::terminate_message(
+        terminate_message(
             &self.sender,
             SmartSpeakerActors::WakeWordActor);
         self.alive = false;

@@ -3,8 +3,8 @@ use std::thread;
 use std::time::Duration;
 use crate::smart_speaker::models::core_model::SmartSpeakerState;
 use crate::smart_speaker::models::mic_model::VoiceActivityDetector;
-use crate::utils::message_util;
-use crate::utils::message_util::{RequestAudioStream, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
+use crate::smart_speaker::models::message_model::*;
+use crate::utils::message_util::*;
 
 pub(crate) struct VoiceActivityDetectActor {
     alive: bool,
@@ -44,10 +44,10 @@ impl VoiceActivityDetectActor {
 
      fn handle_message(&mut self, message: SmartSpeakerMessage) {
          match message {
-             SmartSpeakerMessage::RequestShutdown(RequestShutdown {}) => {
+             SmartSpeakerMessage::RequestShutdown(ShutdownMessage {}) => {
                  self.alive = false;
              },
-             SmartSpeakerMessage::RequestAudioStream(RequestAudioStream { send_from: _, send_to: _, stream }) => {
+             SmartSpeakerMessage::RequestAudioStream(AudioStreamMessage { send_from: _, send_to: _, stream }) => {
                  if self.stream_before != stream {
                      self.listen(&stream);
                      self.stream_before = stream;
@@ -60,7 +60,7 @@ impl VoiceActivityDetectActor {
     }
 
     fn request_audio_stream(&self) {
-        message_util::audio_stream_message(
+        audio_stream_message(
             &self.sender,
             SmartSpeakerActors::VoiceActivityDetectActor,
             SmartSpeakerActors::AudioActor,
@@ -69,7 +69,7 @@ impl VoiceActivityDetectActor {
     }
 
     fn request_attention(&mut self) {
-        message_util::state_update_message(
+        state_update_message(
             &self.sender,
             SmartSpeakerActors::VoiceActivityDetectActor,
             SmartSpeakerActors::CoreActor,
@@ -88,7 +88,7 @@ impl VoiceActivityDetectActor {
     }
 
     fn terminate(&mut self) {
-        message_util::terminate_message(
+        terminate_message(
             &self.sender,
             SmartSpeakerActors::VoiceActivityDetectActor);
         self.alive = false;

@@ -4,7 +4,7 @@ mod core_actor_tests {
     use std::sync::mpsc;
     use crate::smart_speaker::models::core_model::SmartSpeakerState;
     use crate::smart_speaker::models::debug_model::DebugData;
-    use crate::utils::message_util::{ReportTerminated, RequestStateUpdate, RequestAudioStream, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
+    use crate::utils::message_util::{ReportTerminated, RequestStateUpdate, RequestAudioStream, ShutdownMessage, SmartSpeakerActors, SmartSpeakerMessage};
     use super::super::core_actor::*;
 
     #[test]
@@ -15,10 +15,10 @@ mod core_actor_tests {
         let mut handler = CoreActorMessageHandler {
             debug: DebugData::new(false),
             };
-        let message = SmartSpeakerMessage::RequestShutdown(RequestShutdown {});
+        let message = SmartSpeakerMessage::RequestShutdown(ShutdownMessage {});
         let state = handler.handle_message(senders, message);
         assert_eq!(state, CoreActorState::ShutdownRequested {});
-        assert_eq!(rx.recv().unwrap(), SmartSpeakerMessage::RequestShutdown(RequestShutdown {}));
+        assert_eq!(rx.recv().unwrap(), SmartSpeakerMessage::RequestShutdown(ShutdownMessage {}));
     }
 
     #[test]

@@ -5,8 +5,8 @@ use std::time::Duration;
 use crate::smart_speaker::controllers::mic_controller;
 use crate::smart_speaker::models::intent_model::{IntentAction, IntentCookingMenu};
 use crate::smart_speaker::models::mic_model::SpeechToIntent;
-use crate::utils::message_util;
-use crate::utils::message_util::{IntentContent, ProcessResult, RequestAudioStream, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
+use crate::smart_speaker::models::message_model::*;
+use crate::utils::message_util::*;
 
 pub(crate) struct SpeechToIntentActor {
     alive: bool,
@@ -28,8 +28,8 @@ impl SpeechToIntentActor {
     }
 
     pub(crate) fn run(&mut self) {
-        println!("SpeechToIntentActor started");
-        self.app.info();
+        write_log_message(&self.sender, SmartSpeakerActors::SpeechToIntentActor, SmartSpeakerLogMessageType::Info("SpeechToIntentActor started".to_string()));
+        write_log_message(&self.sender, SmartSpeakerActors::SpeechToIntentActor, SmartSpeakerLogMessageType::Info(self.app.info()));
         while self.alive {
             match self.receiver.try_recv() {
                 Ok(message) => {
@@ -46,10 +46,10 @@ impl SpeechToIntentActor {
 
      fn handle_message(&mut self, message: SmartSpeakerMessage) {
          match message {
-             SmartSpeakerMessage::RequestShutdown(RequestShutdown {}) => {
+             SmartSpeakerMessage::RequestShutdown(ShutdownMessage {}) => {
                  self.alive = false;
              },
-             SmartSpeakerMessage::RequestAudioStream(RequestAudioStream { send_from: _, send_to: _, stream }) => {
+             SmartSpeakerMessage::RequestAudioStream(AudioStreamMessage { send_from: _, send_to: _, stream }) => {
                  if self.stream_before != stream {
                      self.listen(&stream);
                      self.stream_before = stream;
@@ -94,7 +94,7 @@ impl SpeechToIntentActor {
     }
 
     fn request_audio_stream(&mut self) {
-        message_util::audio_stream_message(
+        audio_stream_message(
             &self.sender,
             SmartSpeakerActors::SpeechToIntentActor,
             SmartSpeakerActors::AudioActor,
@@ -103,7 +103,7 @@ impl SpeechToIntentActor {
     }
 
     fn intent_finalized(&mut self, result: ProcessResult, content: IntentContent) {
-        message_util::intent_finalized_message(
+        intent_finalized_message(
             &self.sender,
             SmartSpeakerActors::SpeechToIntentActor,
             SmartSpeakerActors::ContextActor,
@@ -113,7 +113,7 @@ impl SpeechToIntentActor {
     }
 
     fn terminate(&mut self) {
-        message_util::terminate_message(
+        terminate_message(
             &self.sender,
             SmartSpeakerActors::SpeechToIntentActor);
         self.alive = false;

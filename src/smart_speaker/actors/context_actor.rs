@@ -5,7 +5,8 @@ use crate::smart_speaker::models::core_model::SmartSpeakerState;
 use crate::smart_speaker::models::intent_model::IntentAction;
 use crate::smart_speaker::models::speak_model::MachineSpeechBoilerplate;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, Task, cooking_task::CookingTask, vision_cooking_task::VisionCookingTask, vision_viewing_task::VisionViewingTask, SmartSpeakerTaskResultCode};
-use crate::utils::message_util::{self, IntentContent, IntentFinalized, ProcessResult, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage, StringMessage, VisionContent, VisionFinalized};
+use crate::smart_speaker::models::message_model::*;
+use crate::utils::message_util::*;
 
 pub(crate) struct ContextActor {
     alive: bool,
@@ -29,7 +30,7 @@ impl ContextActor {
     }
 
     pub(crate) fn run(&mut self) {
-        println!("ContextActor started");
+        write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Info("ContextActor started".to_string()));
         while self.alive {
             let mut pending = true;
             while pending {
@@ -44,22 +45,21 @@ impl ContextActor {
     }
 
     fn handle_message(&mut self, message: SmartSpeakerMessage) {
-        println!("ContextActor received message");
         match message {
-            SmartSpeakerMessage::RequestShutdown(RequestShutdown {}) => {
+            SmartSpeakerMessage::RequestShutdown(ShutdownMessage {}) => {
                 self.alive = false;
             },
-            SmartSpeakerMessage::IntentFinalized(IntentFinalized { send_from: _, send_to: _, result, content }) => {
+            SmartSpeakerMessage::IntentFinalized(IntentFinalizedMessage { send_from: _, send_to: _, result, content }) => {
                 self.handle_intent(result, content);
             },
-            SmartSpeakerMessage::VisionFinalized(VisionFinalized { send_from: _, send_to: _, result, contents }) => {
+            SmartSpeakerMessage::VisionFinalized(VisionFinalizedMessage { send_from: _, send_to: _, result, contents }) => {
                 self.handle_vision(result, contents);
             }
             SmartSpeakerMessage::TextToSpeechFinished(StringMessage { send_from: _, send_to: _, message: _ }) => {
                 self.handle_next_state();
             }
             _ => {
-                dbg!("unhandled message");
+                write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Error("unhandled message".to_string()));
             }
         }
     }
@@ -68,12 +68,12 @@ impl ContextActor {
         match content.intent {
             IntentAction::WhatYouSee => {
                 if self.vision {
-                    println!("start vision viewing task");
+                    write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug("start vision viewing task".to_string()));
                     self.current_task = Some(Box::new(VisionViewingTask::new().unwrap()))
                 }
             }
             IntentAction::CookingTask => {
-                println!("start cooking task");
+                write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug("start cooking task".to_string()));
                 if self.vision {
                     self.current_task = Some(Box::new(VisionCookingTask::new(content).unwrap()))
                 } else {
@@ -96,18 +96,18 @@ impl ContextActor {
             ProcessResult::Success => {
                 match &mut self.current_task {
                     None => {
-                        println!("no context. try start new context");
+                        write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug("no context. try start new context".to_string()));
                         self.start_new_task(content);
                     }
                     Some(task) => {
-                        println!("context exists. proceed context");
+                        write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug("context exists. proceed context".to_string()));
                         let result = task.try_next(Some(Box::new(content))).unwrap();
                         self.handle_task_result(result);
                     }
                 }
             },
             ProcessResult::Failure => {
-                println!("intent failed");
+                write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug("intent failed".to_string()));
                 match &mut self.current_task {
                     None => {
                         self.request_text_to_speech_boilerplate(MachineSpeechBoilerplate::IntentFailed as usize);
@@ -185,7 +185,7 @@ impl ContextActor {
     }
 
     fn request_state_update(&self, state: SmartSpeakerState) {
-        message_util::state_update_message(
+        state_update_message(
             &self.sender,
             SmartSpeakerActors::ContextActor,
             SmartSpeakerActors::CoreActor,
@@ -194,7 +194,7 @@ impl ContextActor {
     }
 
     fn request_text_to_speech(&self, text: String) {
-        message_util::text_to_speech_message(
+        text_to_speech_message(
             &self.sender,
             SmartSpeakerActors::ContextActor,
             SmartSpeakerActors::MachineSpeechActor,
@@ -203,7 +203,7 @@ impl ContextActor {
     }
 
     fn request_text_to_speech_boilerplate(&self, index: usize) {
-        message_util::text_to_speech_boilerplate_message(
+        text_to_speech_boilerplate_message(
             &self.sender,
             SmartSpeakerActors::ContextActor,
             SmartSpeakerActors::MachineSpeechActor,

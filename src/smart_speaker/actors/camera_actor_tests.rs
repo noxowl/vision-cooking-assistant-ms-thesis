@@ -6,7 +6,7 @@ mod camera_actor_tests {
     use opencv::core::Mat;
     use crate::smart_speaker::actors::camera_actor::CameraActor;
     use crate::smart_speaker::models::vision_model::Capture;
-    use crate::utils::message_util::{RequestCameraFrame, RequestShutdown, SmartSpeakerActors, SmartSpeakerMessage};
+    use crate::utils::message_util::{RequestCameraFrame, ShutdownMessage, SmartSpeakerActors, SmartSpeakerMessage};
     use crate::utils::vision_util::set_camera_capture;
 
     #[test]
@@ -42,8 +42,8 @@ mod camera_actor_tests {
                 panic!("unexpected message");
             }
         }
-        actor_tx.send(SmartSpeakerMessage::RequestShutdown(RequestShutdown {})).expect("TODO: panic message");
-        actor_tx.send(SmartSpeakerMessage::RequestShutdown(RequestShutdown {})).expect("TODO: panic message");
+        actor_tx.send(SmartSpeakerMessage::RequestShutdown(ShutdownMessage {})).expect("TODO: panic message");
+        actor_tx.send(SmartSpeakerMessage::RequestShutdown(ShutdownMessage {})).expect("TODO: panic message");
         assert!(core_rx.try_recv().is_err());
     }
 }

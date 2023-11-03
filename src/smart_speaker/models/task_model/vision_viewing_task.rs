@@ -2,7 +2,8 @@ use anyhow::Result;
 use crate::smart_speaker::models::intent_model::IntentAction;
 use crate::smart_speaker::models::step_model::generic_step::{CountVisionObjectExecutable, GenericAction, GenericStep};
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, Task};
-use crate::utils::message_util::{Content, IntentContent, VisionContent};
+use crate::smart_speaker::models::message_model::*;
+use crate::utils::message_util::*;
 
 pub(crate) struct VisionViewingTask {
     pub(crate) step: Vec<GenericStep>,

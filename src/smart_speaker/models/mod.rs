@@ -9,3 +9,4 @@ pub(crate) mod context_model;
 pub(crate) mod core_model;
 pub(crate) mod task_model;
 pub(crate) mod step_model;
+pub(crate) mod message_model;

@@ -5,7 +5,8 @@ use opencv::prelude::*;
 use opencv::core::Mat;
 use crate::smart_speaker::controllers::camera_controller;
 use crate::smart_speaker::models::vision_model::Capture;
-use crate::utils::message_util::{camera_frame_message, RequestCameraFrame, SmartSpeakerActors, SmartSpeakerMessage};
+use crate::smart_speaker::models::message_model::*;
+use crate::utils::message_util::*;
 use crate::utils::vision_util::VisionType;
 
 pub(crate) struct CameraActor {
@@ -30,8 +31,8 @@ impl CameraActor {
     }
 
     pub(crate) fn run(&mut self) {
-        println!("CameraActor started");
-        self.core.info();
+        write_log_message(&self.sender, SmartSpeakerActors::CameraActor, SmartSpeakerLogMessageType::Info("CameraActor started".to_string()));
+        write_log_message(&self.sender, SmartSpeakerActors::CameraActor, SmartSpeakerLogMessageType::Info(self.core.info()));
         while self.alive {
             match &mut self.core.source {
                 None => {}
@@ -68,7 +69,7 @@ impl CameraActor {
             SmartSpeakerMessage::RequestShutdown(_) => {
                 self.alive = false;
             },
-            SmartSpeakerMessage::RequestCameraFrame(RequestCameraFrame {
+            SmartSpeakerMessage::RequestCameraFrame(CameraFrameMessage {
                                                         send_from,
                                                         send_to: _,
                                                         frame_data_bytes: _,

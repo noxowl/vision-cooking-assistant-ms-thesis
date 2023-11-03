@@ -4,7 +4,8 @@ use crate::smart_speaker::models::core_model::PendingType;
 use crate::smart_speaker::models::step_model::generic_step::StepExecutable;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode};
 use crate::smart_speaker::models::vision_model::{VisionAction, VisionObject};
-use crate::utils::message_util::{Content, IntentContent, VisionContent};
+use crate::smart_speaker::models::message_model::*;
+use crate::utils::message_util::*;
 
 #[derive(Debug, Clone)]
 pub(crate) struct CookingStep {

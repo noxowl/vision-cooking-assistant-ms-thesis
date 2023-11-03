@@ -5,7 +5,8 @@ use crate::smart_speaker::models::step_model::cooking_step::{CookingAction, Cook
 use crate::smart_speaker::models::step_model::generic_step::StepExecutable;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, Task};
 use crate::smart_speaker::models::task_model::cooking_task::CookingTaskIngredient;
-use crate::utils::message_util::{Content, IntentContent, VisionContent};
+use crate::smart_speaker::models::message_model::*;
+use crate::utils::message_util::*;
 
 pub(crate) struct VisionCookingTask {
     pub(crate) menu: IntentCookingMenu,

@@ -1,7 +1,8 @@
 use std::fmt::Debug;
 use anyhow::Result;
 use crate::smart_speaker::models::core_model::PendingType;
-use crate::utils::message_util::{Content};
+use crate::smart_speaker::models::message_model::*;
+use crate::utils::message_util::*;
 
 pub(crate) mod cooking_task;
 pub(crate) mod vision_viewing_task;

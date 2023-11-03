@@ -3,7 +3,8 @@ use anyhow::{anyhow, Result};
 use crate::smart_speaker::models::core_model::PendingType;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode};
 use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction};
-use crate::utils::message_util::{Content, IntentContent, VisionContent};
+use crate::smart_speaker::models::message_model::*;
+use crate::utils::message_util::*;
 
 #[derive(Debug, Clone)]
 pub(crate) struct GenericStep {

@@ -6,7 +6,8 @@ use bounded_vec_deque::BoundedVecDeque;
 use opencv::{core::Mat, core::Vector, types::VectorOfVectorOfPoint2f};
 use crate::smart_speaker::controllers::vision_controller;
 use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction, VisionObject, VisionSlot};
-use crate::utils::message_util::{camera_frame_message, gaze_info_message, RequestCameraFrame, RequestGazeInfo, SmartSpeakerActors, SmartSpeakerMessage, RequestVisionAction, VisionContent, vision_finalized_message, ProcessResult};
+use crate::smart_speaker::models::message_model::*;
+use crate::utils::message_util::*;
 
 pub(crate) struct VisionActor {
     alive: bool,
@@ -32,7 +33,7 @@ impl VisionActor {
     }
 
     pub(crate) fn run(&mut self) {
-        println!("VisionActor started");
+        write_log_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerLogMessageType::Info("VisionActor started".to_string()));
         while self.alive {
             if self.alive {
                 self.request_camera_frame();
@@ -55,7 +56,7 @@ impl VisionActor {
             SmartSpeakerMessage::RequestShutdown(_) => {
                 self.alive = false;
             },
-            SmartSpeakerMessage::RequestCameraFrame(RequestCameraFrame { send_from: _,
+            SmartSpeakerMessage::RequestCameraFrame(CameraFrameMessage { send_from: _,
                                                         send_to: _,
                                                         frame_data_bytes,
                                                         height,}) => {
@@ -70,10 +71,10 @@ impl VisionActor {
                     }
                 }
             },
-            SmartSpeakerMessage::RequestGazeInfo(RequestGazeInfo { send_from: _, send_to: _, gaze_info }) => {
+            SmartSpeakerMessage::RequestGazeInfo(GazeInfoMessage { send_from: _, send_to: _, gaze_info }) => {
                 self.handle_gaze_info(gaze_info);
             },
-            SmartSpeakerMessage::RequestVisionAction(RequestVisionAction { send_from: _, send_to: _, actions }) => {
+            SmartSpeakerMessage::RequestVisionAction(VisionActionMessage { send_from: _, send_to: _, actions }) => {
                 let mut result: Vec<VisionContent> = Vec::new();
                 for action in actions {
                     match action {
@@ -119,7 +120,7 @@ impl VisionActor {
                     Some(frame) => {
                         match vision_controller::detect_target_objects(frame, &target) {
                             Ok(objects) => {
-                                println!("Detected objects: {}", &objects.len());
+                                write_log_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerLogMessageType::Debug(format!("Detected objects: {}", &objects.len())));
                                 match vision_controller::measure_object_size_by_aruco(aruco, &objects) {
                                     Ok(measure_result) => {
                                         let content_result = VisionContent::new(
@@ -158,10 +159,6 @@ impl VisionActor {
     fn request_gaze_info(&self) {
         gaze_info_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerActors::GazeActor, (0., 0.));
     }
-
-    // fn send_request_marker_info(&self) {
-    //     marker_info_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerActors::CoreActor, self.previous_aruco_info.back().unwrap().clone());
-    // }
 
     fn send_vision_finalized(&self, result: ProcessResult, contents: Vec<VisionContent>) {
         vision_finalized_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerActors::ContextActor, result, contents);

@@ -1,6 +1,6 @@
 use std::sync::mpsc;
 use anyhow::{anyhow, Result};
-use tts::{Tts, Features, Voice, UtteranceId};
+use tts::{Tts, Features, Voice, UtteranceId, Error};
 #[cfg(target_os = "macos")]
 use cocoa_foundation::base::id;
 #[cfg(target_os = "macos")]
@@ -22,21 +22,29 @@ impl MachineSpeech {
         }
     }
 
-    pub(crate) fn init(&mut self) -> Result<()> {
+    pub(crate) fn init(&mut self) -> Result<String> {
         let voice_participants = self.app.voices().unwrap().into_iter().filter(|v| v.language() == self.language.to_str().to_string()).collect::<Vec<Voice>>();
-        dbg!(&voice_participants);
         let voice = voice_participants.first().ok_or(anyhow!("no voice found"))?;
         self.app.set_voice(voice)?;
-        Ok(())
+        Ok(format!("{:?}", &voice_participants))
     }
 
-    pub(crate) fn info(&self) {
+    pub(crate) fn info(&self) -> String {
         let Features {
             get_voice,
             ..
         } = self.app.supported_features();
         if get_voice {
-            println!("Voice: {:?}", self.app.voice().unwrap());
+            format!("Voice: {:?}", self.app.voice().unwrap()).to_string()
+        } else {
+            match self.app.voice() {
+                Ok(voice) => {
+                    format!("Voice: {:?}", voice).to_string()
+                }
+                Err(err) => {
+                    format!("Voice: {:?}", err).to_string()
+                }
+            }
         }
     }
 
