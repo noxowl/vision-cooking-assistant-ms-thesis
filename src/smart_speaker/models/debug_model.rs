@@ -25,6 +25,13 @@ impl DebugData {
         }
     }
 
+    pub(crate) fn force_cocoa_loop(&self) {
+        // Force to create a frame to display (for TTS callback)
+        let display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::all(0.)).unwrap();
+        highgui::imshow("Debug Screen", &display_frame).unwrap();
+        highgui::wait_key(1).unwrap();
+    }
+
     pub(crate) fn print(&mut self) {
         match &self.frame {
             Some(frame) => {
@@ -91,7 +98,7 @@ impl DebugData {
                 }
 
                 highgui::imshow("Debug Screen", &display_frame).unwrap();
-                highgui::imshow("Debug Screen 2", &masked).unwrap();
+                // highgui::imshow("Debug Screen 2", &masked).unwrap();
                 highgui::wait_key(1).unwrap();
             },
             None => {
@@ -100,8 +107,8 @@ impl DebugData {
         }
     }
 
-    pub(crate) fn update_frame(&mut self, frame_data_bytes: &Vec<u8>, height: i32) {
-        if let Ok(frame) = vision_controller::data_bytes_to_mat(frame_data_bytes.clone(), height) {
+    pub(crate) fn update_frame(&mut self, frame_data_bytes: &Vec<u8>, height: &i32) {
+        if let Ok(frame) = vision_controller::data_bytes_to_mat(frame_data_bytes.clone(), height.clone()) {
             // let frame = vision_controller::resize_frame(frame);
             self.frame = Some(frame);
         }

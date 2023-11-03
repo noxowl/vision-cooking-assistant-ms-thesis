@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
-use crate::smart_speaker::models::core_model::SmartSpeakerState;
+use crate::smart_speaker::models::core_model::{PendingType, SmartSpeakerState};
 use crate::smart_speaker::models::intent_model::IntentAction;
 use crate::smart_speaker::models::speak_model::MachineSpeechBoilerplate;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, Task, cooking_task::CookingTask, vision_cooking_task::VisionCookingTask, vision_viewing_task::VisionViewingTask, SmartSpeakerTaskResultCode};
@@ -68,12 +68,15 @@ impl ContextActor {
         match content.intent {
             IntentAction::WhatYouSee => {
                 if self.vision {
-                    write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug("start vision viewing task".to_string()));
+                    write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Info("start vision viewing task".to_string()));
                     self.current_task = Some(Box::new(VisionViewingTask::new().unwrap()))
+                } else {
+                    self.request_text_to_speech_boilerplate(MachineSpeechBoilerplate::Undefined as usize);
+                    self.request_state_update(SmartSpeakerState::Idle);
                 }
             }
             IntentAction::CookingTask => {
-                write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug("start cooking task".to_string()));
+                write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Info("start cooking task".to_string()));
                 if self.vision {
                     self.current_task = Some(Box::new(VisionCookingTask::new(content).unwrap()))
                 } else {
@@ -81,6 +84,7 @@ impl ContextActor {
                 }
             }
             _ => {
+                dbg!(content);
                 self.request_text_to_speech_boilerplate(MachineSpeechBoilerplate::Undefined as usize);
                 self.request_state_update(SmartSpeakerState::Idle);
             }
@@ -185,12 +189,37 @@ impl ContextActor {
     }
 
     fn request_state_update(&self, state: SmartSpeakerState) {
-        state_update_message(
-            &self.sender,
-            SmartSpeakerActors::ContextActor,
-            SmartSpeakerActors::CoreActor,
-            state,
-        )
+        match &state {
+            SmartSpeakerState::Pending(p) => {
+                match p {
+                    PendingType::Speak => {
+                        state_update_message(
+                            &self.sender,
+                            SmartSpeakerActors::ContextActor,
+                            SmartSpeakerActors::CoreActor,
+                            state,
+                        )
+                    }
+                    PendingType::Vision(_) => {
+                        state_update_message(
+                            &self.sender,
+                            SmartSpeakerActors::ContextActor,
+                            SmartSpeakerActors::VisionActor,
+                            state,
+                        )
+                    }
+                }
+            }
+            _ => {
+                state_update_message(
+                    &self.sender,
+                    SmartSpeakerActors::ContextActor,
+                    SmartSpeakerActors::CoreActor,
+                    state,
+                )
+            }
+        }
+
     }
 
     fn request_text_to_speech(&self, text: String) {

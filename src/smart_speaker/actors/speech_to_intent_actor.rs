@@ -70,7 +70,9 @@ impl SpeechToIntentActor {
                 };
                 if let Ok(inference) = self.app.get_inference() {
                     match inference {
-                        None => {}
+                        None => {
+                            dbg!("inference is none");
+                        }
                         Some(i) => {
                             content.intent = IntentAction::from_str(&i.intent.unwrap()).unwrap();
                             for (key, value) in i.slots {

@@ -5,6 +5,7 @@ use anyhow::{anyhow, Result};
 use bounded_vec_deque::BoundedVecDeque;
 use opencv::{core::Mat, core::Vector, types::VectorOfVectorOfPoint2f};
 use crate::smart_speaker::controllers::vision_controller;
+use crate::smart_speaker::models::core_model::{PendingType, SmartSpeakerState};
 use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction, VisionObject, VisionSlot};
 use crate::smart_speaker::models::message_model::*;
 use crate::utils::message_util::*;
@@ -26,9 +27,9 @@ impl VisionActor {
             debug,
             receiver,
             sender,
-            previous_frames: BoundedVecDeque::new(60),
-            previous_gaze_info: BoundedVecDeque::new(60),
-            previous_aruco_info: BoundedVecDeque::new(60),
+            previous_frames: BoundedVecDeque::new(30),
+            previous_gaze_info: BoundedVecDeque::new(30),
+            previous_aruco_info: BoundedVecDeque::new(30),
         }
     }
 
@@ -74,24 +75,38 @@ impl VisionActor {
             SmartSpeakerMessage::RequestGazeInfo(GazeInfoMessage { send_from: _, send_to: _, gaze_info }) => {
                 self.handle_gaze_info(gaze_info);
             },
-            SmartSpeakerMessage::RequestVisionAction(VisionActionMessage { send_from: _, send_to: _, actions }) => {
-                let mut result: Vec<VisionContent> = Vec::new();
-                for action in actions {
-                    match action {
-                        VisionAction::None => {}
-                        VisionAction::ObjectDetectionWithAruco(target) => {
-                            match self.handle_object_detection_with_aruco(target) {
-                                Ok(content) => {
-                                    result.push(content);
+            SmartSpeakerMessage::RequestStateUpdate(StateUpdateMessage { send_from: _, send_to: _, state }) => {
+                match state {
+                    SmartSpeakerState::Pending(p) => {
+                        match p {
+                            PendingType::Vision(actions) => {
+                                let mut result: Vec<VisionContent> = Vec::new();
+                                for action in actions {
+                                    match action {
+                                        VisionAction::None => {}
+                                        VisionAction::ObjectDetectionWithAruco(target) => {
+                                            match self.handle_object_detection_with_aruco(target) {
+                                                Ok(content) => {
+                                                    result.push(content);
+                                                }
+                                                Err(_) => {
+                                                    self.send_vision_finalized(ProcessResult::Failure, vec![]);
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
-                                Err(_) => {
-                                    self.send_vision_finalized(ProcessResult::Failure, vec![]);
-                                }
+                                self.send_vision_finalized(ProcessResult::Success, result);
+                            }
+                            _ => {
+                                self.send_vision_finalized(ProcessResult::Failure, vec![]);
                             }
                         }
                     }
+                    _ => {
+                        self.send_vision_finalized(ProcessResult::Failure, vec![]);
+                    }
                 }
-                self.send_vision_finalized(ProcessResult::Success, result);
             },
             _ => {}
         }

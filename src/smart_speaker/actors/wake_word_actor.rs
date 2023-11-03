@@ -40,7 +40,7 @@ impl WakeWordActor {
             }
             thread::sleep(Duration::from_millis(33));
         }
-        println!("WakeWordActor terminated");
+        write_log_message(&self.sender, SmartSpeakerActors::WakeWordActor, SmartSpeakerLogMessageType::Info("WakeWordActor terminated".to_string()));
     }
 
      fn handle_message(&mut self, message: SmartSpeakerMessage) {
@@ -55,7 +55,7 @@ impl WakeWordActor {
                 }
             },
             _ => {
-                dbg!("unhandled message");
+                write_log_message(&self.sender, SmartSpeakerActors::WakeWordActor, SmartSpeakerLogMessageType::Error("unhandled message".to_string()));
             }
         }
     }
@@ -65,13 +65,13 @@ impl WakeWordActor {
         match result {
             Ok(result) => {
                 if result {
-                    dbg!("wake word detected");
+                    write_log_message(&self.sender, SmartSpeakerActors::WakeWordActor, SmartSpeakerLogMessageType::Info("wake word detected".to_string()));
                     self.request_attention();
                     self.terminate();
                 }
             },
             Err(error) => {
-                dbg!(error);
+                write_log_message(&self.sender, SmartSpeakerActors::WakeWordActor, SmartSpeakerLogMessageType::Error(format!("wake word detection failed: {:?}", error).to_string()));
             }
         }
     }

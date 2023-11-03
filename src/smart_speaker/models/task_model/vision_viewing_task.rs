@@ -23,9 +23,10 @@ impl VisionViewingTask {
 
 impl Task for VisionViewingTask {
     fn init(&mut self) -> Result<SmartSpeakerTaskResult> {
-        Ok(SmartSpeakerTaskResult::new(
+        Ok(SmartSpeakerTaskResult::with_tts(
             SmartSpeakerTaskResultCode::Wait(
-                self.step[*&self.current_step].waiting_for.clone()))
+                self.step[*&self.current_step].waiting_for.clone()),
+            "確認しています。".to_string())
         )
     }
 

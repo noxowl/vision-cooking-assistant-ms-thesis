@@ -1,13 +1,13 @@
 use std::sync::mpsc;
 use anyhow::{anyhow, Result};
 use tts::{Tts, Features, Voice, UtteranceId, Error};
+use crate::utils::config_util::LanguageTag;
 #[cfg(target_os = "macos")]
 use cocoa_foundation::base::id;
 #[cfg(target_os = "macos")]
-use cocoa_foundation::foundation::NSRunLoop;
+use cocoa_foundation::foundation::{NSRunLoop, NSDefaultRunLoopMode};
 #[cfg(target_os = "macos")]
-use objc::{msg_send, sel, sel_impl};
-use crate::utils::config_util::LanguageTag;
+use objc::{msg_send, sel, sel_impl, class};
 
 pub(crate) struct MachineSpeech {
     app: Tts,
@@ -26,6 +26,7 @@ impl MachineSpeech {
         let voice_participants = self.app.voices().unwrap().into_iter().filter(|v| v.language() == self.language.to_str().to_string()).collect::<Vec<Voice>>();
         let voice = voice_participants.first().ok_or(anyhow!("no voice found"))?;
         self.app.set_voice(voice)?;
+
         Ok(format!("{:?}", &voice_participants))
     }
 
@@ -48,24 +49,37 @@ impl MachineSpeech {
         }
     }
 
-    pub(crate) fn speak(&mut self, text: String) -> Result<()> {
-        let Features {
-            utterance_callbacks,
-            ..
-        } = self.app.supported_features();
-        let result = self.app.speak(text, true);
-        Ok(())
-    }
+    // pub(crate) fn speak(&mut self, text: String) -> Result<()> {
+    //     let Features {
+    //         utterance_callbacks,
+    //         ..
+    //     } = self.app.supported_features();
+    //     let result = self.app.speak(text, false);
+    //     Ok(())
+    // }
 
     pub(crate) fn speak_with_callback(&mut self, text: String, callback_sender: mpsc::Sender<usize>) {
         let Features {
             utterance_callbacks,
             ..
         } = self.app.supported_features();
-        let result = self.app.speak(text, true);
-        self.app.on_utterance_end(Some(Box::new(move |utterance_id: UtteranceId| {
+        let _ = self.app.speak(text, false);
+        if utterance_callbacks {
+            self.app.on_utterance_end(Some(Box::new(move |utterance_id: UtteranceId| {
+                let _ = callback_sender.send(0);
+            }))).unwrap();
+        } else {
             let _ = callback_sender.send(0);
-        }))).unwrap();
+        }
+        //
+        // #[cfg(target_os = "macos")]
+        // {
+        //     let run_loop: id = unsafe { NSRunLoop::currentRunLoop() };
+        //     unsafe {
+        //         let date: id = msg_send![class!(NSDate), distantFuture];
+        //         let _: () = msg_send![run_loop, runMode:NSDefaultRunLoopMode beforeDate:date];
+        //     }
+        // }
     }
 }
 

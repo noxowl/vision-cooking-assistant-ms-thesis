@@ -118,7 +118,6 @@ impl SpeechToIntent {
         // TODO: Change return type as enum
         if let Ok(inference) = self.app.get_inference() {
             return if inference.is_understood {
-                dbg!(&inference.is_understood);
                 dbg!(&inference.intent);
                 dbg!(&inference.slots);
                 Ok(

@@ -5,6 +5,7 @@ use crate::smart_speaker::models::speak_model::{MachineSpeech, MachineSpeechBoil
 use crate::smart_speaker::models::message_model::*;
 use crate::utils::message_util::*;
 
+
 pub(crate) struct MachineSpeechActor {
     alive: bool,
     app: MachineSpeech,
@@ -77,9 +78,11 @@ impl MachineSpeechActor {
                 self.alive = false;
             },
             SmartSpeakerMessage::RequestTextToSpeech(message) => {
+                write_log_message(&self.sender, SmartSpeakerActors::MachineSpeechActor, SmartSpeakerLogMessageType::Debug(format!("RequestTextToSpeech({:?})", &message.message)));
                 self.speech(message.message, Some(message.send_from));
             },
             SmartSpeakerMessage::StringMessage(message) => {
+                write_log_message(&self.sender, SmartSpeakerActors::MachineSpeechActor, SmartSpeakerLogMessageType::Debug(format!("RequestTextToSpeech({:?})", &message.message)));
                 self.speech(TextToSpeechMessageType::Normal(message.message), None);
             },
             _ => {
@@ -106,12 +109,27 @@ pub(crate) struct MachineSpeechCallbackMicroActor {
 
 impl MachineSpeechCallbackMicroActor {
     fn run(&mut self) {
-        dbg!(format!("MachineSpeechCallbackMicroActor started with {:?}", &self.message));
-        while let Ok(message) = self.receiver.recv() {
-            dbg!(format!("MachineSpeechCallbackMicroActor({:?}) got callback({:?})", &self.message, message));
-            if let Some(actor) = &self.message {
-                self.sender.send(actor.clone()).unwrap();
+        dbg!(format!("MachineSpeechCallbackMicroActor started with {:?}", &self.message.clone()));
+        let mut alive = true;
+        while alive {
+            match self.receiver.try_recv() {
+                Ok(message) => {
+                    alive = false;
+                    dbg!(format!("MachineSpeechCallbackMicroActor({:?}) got callback({:?})", &self.message, message));
+                    if let Some(actor) = &self.message {
+                        self.sender.send(actor.clone()).unwrap();
+                    }
+                },
+                _ => {
+                }
             }
+            thread::sleep(Duration::from_millis(1));
         }
+        // while let Ok(message) = self.receiver.recv() {
+        //     dbg!(format!("MachineSpeechCallbackMicroActor({:?}) got callback({:?})", &self.message, message));
+        //     if let Some(actor) = &self.message {
+        //         self.sender.send(actor.clone()).unwrap();
+        //     }
+        // }
     }
 }

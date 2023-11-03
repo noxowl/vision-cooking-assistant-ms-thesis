@@ -24,7 +24,12 @@ use crate::smart_speaker::models::message_model::*;
 use crate::utils::message_util::write_log_message;
 use crate::utils::vision_util;
 use crate::utils::vision_util::VisionType;
-
+#[cfg(target_os = "macos")]
+use cocoa_foundation::base::id;
+#[cfg(target_os = "macos")]
+use cocoa_foundation::foundation::{NSRunLoop, NSDate, NSDefaultRunLoopMode};
+#[cfg(target_os = "macos")]
+use objc::{msg_send, sel, sel_impl, class};
 
 struct CoreActorManager {
     alive: bool,
@@ -203,11 +208,11 @@ pub(crate) struct CoreActorMessageHandler {
 }
 
 impl CoreActorMessageHandler {
-    pub fn handle_message(&mut self, senders: HashMap<SmartSpeakerActors, mpsc::Sender<SmartSpeakerMessage>>, message: SmartSpeakerMessage) -> CoreActorState {
-        return match message {
+    pub fn handle_message(&mut self, senders: &HashMap<SmartSpeakerActors, mpsc::Sender<SmartSpeakerMessage>>, message: SmartSpeakerMessage) -> CoreActorState {
+        return match &message {
             SmartSpeakerMessage::RequestShutdown(ShutdownMessage {}) => {
                 for (_, sender) in senders.iter() {
-                    sender.send(SmartSpeakerMessage::RequestShutdown(ShutdownMessage {})).expect("TODO: panic message");
+                    sender.send(message.clone()).expect("TODO: panic message");
                 }
                 CoreActorState::ShutdownRequested {}
             },
@@ -217,23 +222,18 @@ impl CoreActorMessageHandler {
                                   SmartSpeakerLogMessageType::Debug(
                                       format!("ReportTerminated from {:?} to {:?}", &send_from, &send_to).to_string()));
                 CoreActorState::ActorTerminated {
-                    actor: send_from,
+                    actor: send_from.clone(),
                 }
             },
-            SmartSpeakerMessage::RequestAudioStream(AudioStreamMessage { send_from, send_to, stream }) => {
+            SmartSpeakerMessage::RequestAudioStream(AudioStreamMessage { send_from, send_to, stream: _ }) => {
                 if senders.get(&send_from).is_none() {
                     write_log_message(&senders.get(&SmartSpeakerActors::LoggerActor).unwrap(),
                                       SmartSpeakerActors::CoreActor,
                                       SmartSpeakerLogMessageType::Error(
                                           format!("RequestAudioStream find sender error: {:?} to {:?}", &send_from, &send_to).to_string()));
-                    return CoreActorState::WaitForNextMessage {};
                 }
                 if let Some(sender) = senders.get(&send_to) {
-                    match sender.send(SmartSpeakerMessage::RequestAudioStream(AudioStreamMessage {
-                        send_from: send_from.clone(),
-                        send_to: send_to.clone(),
-                        stream,
-                    })) {
+                    match sender.send(message.clone()) {
                         Ok(_) => {},
                         Err(_) => {
                             write_log_message(&senders.get(&SmartSpeakerActors::LoggerActor).unwrap(),
@@ -252,35 +252,26 @@ impl CoreActorMessageHandler {
             },
             SmartSpeakerMessage::RequestCameraFrame(CameraFrameMessage { send_from, send_to,
                                                         frame_data_bytes, height }) => {
-                if self.debug.activated && send_from == SmartSpeakerActors::CameraActor {
+                if self.debug.activated && send_from == &SmartSpeakerActors::CameraActor {
                     self.debug.update_frame(&frame_data_bytes, height);
                 }
                 if let Some(sender) = senders.get(&send_to) {
-                    sender.send(SmartSpeakerMessage::RequestCameraFrame(CameraFrameMessage {
-                        send_from,
-                        send_to,
-                        frame_data_bytes,
-                        height,
-                    })).expect("TODO: panic message");
+                    sender.send(message).expect("TODO: panic message");
                 }
                 CoreActorState::WaitForNextMessage {}
             },
             SmartSpeakerMessage::RequestGazeInfo(GazeInfoMessage { send_from, send_to, gaze_info }) => {
-                if self.debug.activated && send_from == SmartSpeakerActors::GazeActor {
+                if self.debug.activated && send_from == &SmartSpeakerActors::GazeActor {
                     self.debug.update_gaze_info(&gaze_info);
                 }
                 if let Some(sender) = senders.get(&send_to) {
-                    sender.send(SmartSpeakerMessage::RequestGazeInfo(GazeInfoMessage { send_from, send_to, gaze_info })).expect("TODO: panic message");
+                    sender.send(message).expect("TODO: panic message");
                 }
                 CoreActorState::WaitForNextMessage {}
             },
-            SmartSpeakerMessage::RequestQuery(QueryMessage { send_from, send_to, message }) => {
+            SmartSpeakerMessage::RequestQuery(QueryMessage { send_from, send_to, message: _ }) => {
                 if let Some(sender) = senders.get(&send_to) {
-                    sender.send(SmartSpeakerMessage::RequestQuery(QueryMessage {
-                        send_from,
-                        send_to,
-                        message,
-                    })).expect("TODO: panic message");
+                    sender.send(message).expect("TODO: panic message");
                 }
                 CoreActorState::WaitForNextMessage {}
             },
@@ -332,11 +323,7 @@ impl CoreActorMessageHandler {
                                     }
                                     PendingType::Vision(action) => {
                                         if let Some(sender) = senders.get(&SmartSpeakerActors::VisionActor) {
-                                            sender.send(SmartSpeakerMessage::RequestVisionAction(VisionActionMessage {
-                                                send_from: SmartSpeakerActors::CoreActor,
-                                                send_to: SmartSpeakerActors::VisionActor,
-                                                actions: action,
-                                            })).expect("TODO: panic message");
+                                            sender.send(message).expect("TODO: panic message");
                                         }
                                     }
                                 }
@@ -346,48 +333,27 @@ impl CoreActorMessageHandler {
                     },
                     _ => {}
                 }
-                // if let Some(sender) = senders.get(&SmartSpeakerActors::ContextActor) {
-                //     sender.send(SmartSpeakerMessage::RequestStateUpdate(RequestStateUpdate {
-                //         send_from: SmartSpeakerActors::CoreActor,
-                //         send_to: SmartSpeakerActors::ContextActor,
-                //         state: SmartSpeakerState::Attention,
-                //     })).expect("TODO: panic message");
-                // }
                 CoreActorState::WaitForNextMessage {}
             },
-            SmartSpeakerMessage::RequestTextToSpeech(TextToSpeechMessage { send_from, send_to, message }) => {
+            SmartSpeakerMessage::RequestTextToSpeech(TextToSpeechMessage { send_from, send_to, message: _ }) => {
                 if let Some(sender) = senders.get(&SmartSpeakerActors::MachineSpeechActor) {
-                    sender.send(SmartSpeakerMessage::RequestTextToSpeech(TextToSpeechMessage {
-                        send_from: send_from,
-                        send_to: SmartSpeakerActors::MachineSpeechActor,
-                        message: message,
-                    })).expect("TODO: panic message");
+                    sender.send(message).expect("TODO: panic message");
                 }
                 CoreActorState::WaitForNextMessage {}
             },
-            SmartSpeakerMessage::IntentFinalized(IntentFinalizedMessage { send_from, send_to, result, content }) => {
+            SmartSpeakerMessage::IntentFinalized(IntentFinalizedMessage { send_from: _, send_to: _, result: _, content: _ }) => {
                 if let Some(sender) = senders.get(&SmartSpeakerActors::ContextActor) {
-                    sender.send(SmartSpeakerMessage::IntentFinalized(IntentFinalizedMessage {
-                        send_from: send_from,
-                        send_to: SmartSpeakerActors::ContextActor,
-                        result: result.clone(),
-                        content: content.clone(),
-                    })).expect("TODO: panic message");
+                    sender.send(message).expect("TODO: panic message");
                 }
                 CoreActorState::WaitForNextMessage {}
             },
             SmartSpeakerMessage::VisionFinalized(VisionFinalizedMessage { send_from, send_to, result, contents }) => {
                 if let Some(sender) = senders.get(&SmartSpeakerActors::ContextActor) {
-                    sender.send(SmartSpeakerMessage::VisionFinalized(VisionFinalizedMessage {
-                        send_from: send_from,
-                        send_to: SmartSpeakerActors::ContextActor,
-                        result: result.clone(),
-                        contents: contents.clone(),
-                    })).expect("TODO: panic message");
+                    sender.send(message).expect("TODO: panic message");
                 }
                 CoreActorState::WaitForNextMessage {}
             },
-            SmartSpeakerMessage::TextToSpeechFinished(StringMessage{ send_from, send_to, message }) => {
+            SmartSpeakerMessage::TextToSpeechFinished(StringMessage{ send_from, send_to, message: _ }) => {
                 write_log_message(&senders.get(&SmartSpeakerActors::LoggerActor).unwrap(),
                                   SmartSpeakerActors::CoreActor,
                                   SmartSpeakerLogMessageType::Debug(
@@ -401,35 +367,26 @@ impl CoreActorMessageHandler {
                             }
                         }
                     },
+                    SmartSpeakerActors::CoreActor => {
+                        // consume here
+                    },
                     _ => {
                         if let Some(sender) = senders.get(&SmartSpeakerActors::ContextActor) {
-                            sender.send(SmartSpeakerMessage::TextToSpeechFinished(StringMessage {
-                                send_from: send_from,
-                                send_to: SmartSpeakerActors::ContextActor,
-                                message: message.clone(),
-                            })).expect("TODO: panic message");
+                            sender.send(message).expect("TODO: panic message");
                         }
                     },
                 }
                 CoreActorState::WaitForNextMessage {}
             },
-            SmartSpeakerMessage::StringMessage(StringMessage { send_from, send_to, message }) => {
+            SmartSpeakerMessage::StringMessage(StringMessage { send_from, send_to, message: _ }) => {
                 if let Some(sender) = senders.get(&send_to) {
-                    sender.send(SmartSpeakerMessage::StringMessage(StringMessage {
-                        send_from,
-                        send_to,
-                        message,
-                    })).expect("TODO: panic message");
+                    sender.send(message).expect("TODO: panic message");
                 }
                 CoreActorState::WaitForNextMessage {}
             },
-            SmartSpeakerMessage::WriteLog(LogMessage { send_from, send_to, message }) => {
+            SmartSpeakerMessage::WriteLog(LogMessage { send_from, send_to, message: _ }) => {
                 if let Some(sender) = senders.get(&send_to) {
-                    sender.send(SmartSpeakerMessage::WriteLog(LogMessage {
-                        send_from,
-                        send_to,
-                        message,
-                    })).expect("TODO: panic message");
+                    sender.send(message).expect("TODO: panic message");
                 }
                 CoreActorState::WaitForNextMessage {}
             }
@@ -469,29 +426,34 @@ impl CoreActor {
         self.manager.spawn_actor(&self.config, SmartSpeakerActors::AudioActor, self.sender.clone());
         self.manager.spawn_actor(&self.config, SmartSpeakerActors::WakeWordActor, self.sender.clone());
         self.manager.spawn_actor(&self.config, SmartSpeakerActors::ContextActor, self.sender.clone());
-        self.manager.spawn_actor(&self.config, SmartSpeakerActors::CameraActor, self.sender.clone());
+        self.manager.spawn_actor(&self.config, SmartSpeakerActors::MachineSpeechActor, self.sender.clone());
+        if self.config.vision_type != VisionType::None {
+            self.manager.spawn_actor(&self.config, SmartSpeakerActors::CameraActor, self.sender.clone());
+            // self.manager.spawn_actor(&self.config, SmartSpeakerActors::StreamActor, self.sender.clone());
+        }
         if self.config.vision {
             self.manager.spawn_actor(&self.config, SmartSpeakerActors::VisionActor, self.sender.clone());
             self.manager.spawn_actor(&self.config, SmartSpeakerActors::GazeActor, self.sender.clone());
         }
-        self.manager.spawn_actor(&self.config, SmartSpeakerActors::MachineSpeechActor, self.sender.clone());
-        self.manager.spawn_actor(&self.config, SmartSpeakerActors::StreamActor, self.sender.clone());
+
     }
 
     pub(crate) fn run(&mut self) {
+        dbg!(&self.config);
         self.init();
         while self.manager.alive {
             let mut pending = true;
             while pending {
                 if let Ok(message) = self.receiver.try_recv() {
-                    match self.message_handler.handle_message(self.manager.senders.clone(), message) {
+                    match self.message_handler.handle_message(&self.manager.senders, message) {
                         CoreActorState::ActorTerminated { actor } => {
                             self.manager.remove_sender(actor);
                         },
                         CoreActorState::NewActorRequested { actor, custom_args } => {
                             self.manager.spawn_actor(&self.config, actor, self.sender.clone());
                         },
-                        CoreActorState::WaitForNextMessage {} => {},
+                        CoreActorState::WaitForNextMessage {} => {
+                        },
                         CoreActorState::ShutdownRequested {} => {
                             self.manager.alive = false;
                         }
@@ -501,12 +463,13 @@ impl CoreActor {
                 }
             }
             if self.config.debug {
-                // TODO: add force activate each actor
                 self.message_handler.debug.print();
-                thread::sleep(Duration::from_micros(100));
             } else {
-                thread::sleep(Duration::from_micros(100));
+                // This block for macOS. without this block, the TTS callback will not be called.
+                // but in debug mode, the highgui window will execute this block internally.
+                self.message_handler.debug.force_cocoa_loop();
             }
+            thread::sleep(Duration::from_micros(1));
         }
     }
 }

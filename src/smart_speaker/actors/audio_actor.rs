@@ -42,7 +42,9 @@ impl AudioActor {
                         }
                     }
                 },
-                _ => {}
+                _ => {
+                    dbg!("failed to read mic");
+                }
             }
             thread::sleep(Duration::from_millis(33));
         }

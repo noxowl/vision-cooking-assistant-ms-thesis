@@ -34,7 +34,7 @@ impl GazeActor {
             if let Ok(message) = self.receiver.try_recv() {
                 self.handle_message(message);
             }
-            thread::sleep(Duration::from_millis(1));
+            thread::sleep(Duration::from_millis(33));
         }
     }
 
