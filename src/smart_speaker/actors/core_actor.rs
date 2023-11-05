@@ -462,12 +462,15 @@ impl CoreActor {
                     pending = false;
                 }
             }
-            if self.config.debug {
+            if self.config.debug && self.config.vision {
                 self.message_handler.debug.print();
             } else {
-                // This block for macOS. without this block, the TTS callback will not be called.
-                // but in debug mode, the highgui window will execute this block internally.
-                self.message_handler.debug.force_cocoa_loop();
+                #[cfg(target_os = "macos")]
+                {
+                    // This block for macOS. without this block, the TTS callback will not be called.
+                    // but in debug mode, the highgui window will execute this block internally.
+                    self.message_handler.debug.force_cocoa_loop();
+                }
             }
             thread::sleep(Duration::from_micros(1));
         }
