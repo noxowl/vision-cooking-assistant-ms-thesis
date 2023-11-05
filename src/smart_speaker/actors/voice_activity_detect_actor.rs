@@ -79,7 +79,6 @@ impl VoiceActivityDetectActor {
 
     fn listen(&mut self, stream: &Vec<i16>) {
         if let Ok(probability) = self.app.detect(&stream) {
-            dbg!(&probability);
             if probability > 0.5 {
                 self.request_attention();
                 self.terminate();
