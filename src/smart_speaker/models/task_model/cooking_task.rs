@@ -42,6 +42,7 @@ pub(crate) struct CookingTask {
     pub(crate) step: Vec<CookingStep>,
     pub(crate) current_step: usize,
     pub(crate) ingredients: Vec<CookingTaskIngredient>,
+    pub(crate) ingredient_revision: Vec<CookingTaskIngredientRevision>,
     pub(crate) waiting_content: PendingType,
     pub(crate) checkpoint: usize,
 }
@@ -56,6 +57,7 @@ impl CookingTask {
                     step: vec![],
                     current_step: 0,
                     ingredients: vec![],
+                    ingredient_revision: vec![],
                     waiting_content: PendingType::Speak,
                     checkpoint: 0,
                 })
@@ -71,7 +73,9 @@ impl CookingTask {
 impl Task for CookingTask {
     fn init(&mut self) -> Result<SmartSpeakerTaskResult> {
         dbg!("cooking task init");
-        Ok(SmartSpeakerTaskResult::new(SmartSpeakerTaskResultCode::Wait(PendingType::Speak)))
+        Ok(SmartSpeakerTaskResult::with_tts(
+            SmartSpeakerTaskResultCode::Wait(PendingType::Speak),
+            "料理を始めます。準備ができたら「オッケー」などの答えで教えてください。".to_string()))
     }
 
     fn try_next(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {
