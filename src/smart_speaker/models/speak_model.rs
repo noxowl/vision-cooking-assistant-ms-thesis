@@ -44,6 +44,10 @@ impl MachineSpeech {
                     format!("Voice: {:?}", voice).to_string()
                 }
                 Err(err) => {
+                    #[cfg(target_os = "macos")]
+                    {
+                        return format!("Voice: {:?}", self.app.voices().unwrap().into_iter().filter(|v| v.language() == self.language.to_str().to_string()).collect::<Vec<Voice>>().first()).to_string()
+                    }
                     format!("Voice: {:?}", err).to_string()
                 }
             }
