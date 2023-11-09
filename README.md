@@ -32,6 +32,7 @@ PICOVOICE_MIC_INDEX=indexhere
   * [X] Text to speech actor
     * [ ] Unit test
     * [X] OnSpeechFinished callback (message)
+    * [X] i18n text structure (en, ja, zh, ko)
   * [X] Camera actor
     * [X] Unit test
     * [X] Get frame from webcam
