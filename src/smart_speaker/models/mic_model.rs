@@ -52,7 +52,7 @@ impl WakeWordDetector {
             }
         } else {
             Self {
-                app: PorcupineBuilder::new_with_keyword_paths(api_key, &[context_path]).model_path("porcupine_params_ja.pv").init().unwrap(),
+                app: PorcupineBuilder::new_with_keyword_paths(api_key, &[context_path]).model_path("picovoice_data/porcupine_params_ja.pv").init().unwrap(),
             }
         }
 
