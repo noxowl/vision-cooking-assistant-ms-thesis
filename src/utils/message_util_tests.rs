@@ -2,6 +2,7 @@
 mod message_util_tests {
     use std::sync::mpsc;
     use crate::smart_speaker::models::core_model::SmartSpeakerState;
+    use crate::smart_speaker::models::message_model::*;
     use super::super::message_util::*;
 
     #[test]
@@ -15,10 +16,10 @@ mod message_util_tests {
         );
         let message = receiver.recv().unwrap();
         match message {
-            SmartSpeakerMessage::RequestAudioStream(RequestAudioStream { send_from, send_to, stream }) => {
+            SmartSpeakerMessage::RequestAudioStream(AudioStreamMessage { send_from, send_to, stream }) => {
                 assert_eq!(send_from, SmartSpeakerActors::WakeWordActor);
                 assert_eq!(send_to, SmartSpeakerActors::CoreActor);
-                assert_eq!(stream, vec![]);
+                assert_eq!(stream, Vec::<i16>::new());
             },
             _ => {
                 panic!("unexpected message");
@@ -38,7 +39,7 @@ mod message_util_tests {
         let message = receiver.recv().unwrap();
         match message {
             SmartSpeakerMessage::RequestStateUpdate(
-                RequestStateUpdate { send_from, send_to, state }) => {
+                StateUpdateMessage { send_from, send_to, state }) => {
                 assert_eq!(send_from, SmartSpeakerActors::WakeWordActor);
                 assert_eq!(send_to, SmartSpeakerActors::CoreActor);
             },

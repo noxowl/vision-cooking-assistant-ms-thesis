@@ -3,7 +3,7 @@ mod audio_actor_tests {
     use std::sync::mpsc;
     use std::thread;
     use crate::smart_speaker::models::mic_model::AudioListener;
-    use crate::utils::message_util::{AudioStreamMessage, ShutdownMessage, SmartSpeakerActors, SmartSpeakerMessage};
+    use crate::smart_speaker::models::message_model::*;
     use super::super::audio_actor::*;
 
     #[test]

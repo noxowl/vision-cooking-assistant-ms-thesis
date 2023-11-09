@@ -6,7 +6,7 @@ mod camera_actor_tests {
     use opencv::core::Mat;
     use crate::smart_speaker::actors::camera_actor::CameraActor;
     use crate::smart_speaker::models::vision_model::Capture;
-    use crate::utils::message_util::{RequestCameraFrame, ShutdownMessage, SmartSpeakerActors, SmartSpeakerMessage};
+    use crate::smart_speaker::models::message_model::*;
     use crate::utils::vision_util::set_camera_capture;
 
     #[test]
@@ -20,7 +20,7 @@ mod camera_actor_tests {
             camera_actor.run();
         });
         thread::sleep(std::time::Duration::from_millis(180)); // cold-start duration at development mac mini(2014)
-        actor_tx.send(SmartSpeakerMessage::RequestCameraFrame(RequestCameraFrame {
+        actor_tx.send(SmartSpeakerMessage::RequestCameraFrame(CameraFrameMessage {
             send_from: SmartSpeakerActors::CoreActor,
             send_to: SmartSpeakerActors::CameraActor,
             frame_data_bytes: vec![],
@@ -29,7 +29,7 @@ mod camera_actor_tests {
         thread::sleep(std::time::Duration::from_millis(33));
         let message = core_rx.try_recv().expect("TODO: panic message");
         match message {
-            SmartSpeakerMessage::RequestCameraFrame(RequestCameraFrame { send_from, send_to,
+            SmartSpeakerMessage::RequestCameraFrame(CameraFrameMessage { send_from, send_to,
                                                         frame_data_bytes, height }) => {
                 assert_eq!(send_from, SmartSpeakerActors::CameraActor);
                 assert_eq!(send_to, SmartSpeakerActors::CoreActor);

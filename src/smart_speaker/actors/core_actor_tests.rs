@@ -4,7 +4,7 @@ mod core_actor_tests {
     use std::sync::mpsc;
     use crate::smart_speaker::models::core_model::SmartSpeakerState;
     use crate::smart_speaker::models::debug_model::DebugData;
-    use crate::utils::message_util::{ReportTerminated, RequestStateUpdate, RequestAudioStream, ShutdownMessage, SmartSpeakerActors, SmartSpeakerMessage};
+    use crate::smart_speaker::models::message_model::*;
     use super::super::core_actor::*;
 
     #[test]
@@ -16,7 +16,7 @@ mod core_actor_tests {
             debug: DebugData::new(false),
             };
         let message = SmartSpeakerMessage::RequestShutdown(ShutdownMessage {});
-        let state = handler.handle_message(senders, message);
+        let state = handler.handle_message(&senders, message);
         assert_eq!(state, CoreActorState::ShutdownRequested {});
         assert_eq!(rx.recv().unwrap(), SmartSpeakerMessage::RequestShutdown(ShutdownMessage {}));
     }
@@ -31,7 +31,7 @@ mod core_actor_tests {
         };
         let message = SmartSpeakerMessage::ReportTerminated(ReportTerminated {
             send_from: SmartSpeakerActors::CoreActor, send_to: SmartSpeakerActors::CoreActor});
-        let state = handler.handle_message(senders, message);
+        let state = handler.handle_message(&senders, message);
         assert_eq!(state, CoreActorState::ActorTerminated { actor: SmartSpeakerActors::CoreActor });
     }
 
@@ -43,14 +43,14 @@ mod core_actor_tests {
         let mut handler = CoreActorMessageHandler {
             debug: DebugData::new(false),
         };
-        let message = SmartSpeakerMessage::RequestAudioStream(RequestAudioStream {
+        let message = SmartSpeakerMessage::RequestAudioStream(AudioStreamMessage {
             send_from: SmartSpeakerActors::CoreActor,
             send_to: SmartSpeakerActors::CoreActor,
             stream: vec![],
         });
-        let state = handler.handle_message(senders, message);
+        let state = handler.handle_message(&senders, message);
         assert_eq!(state, CoreActorState::WaitForNextMessage {});
-        assert_eq!(rx.recv().unwrap(), SmartSpeakerMessage::RequestAudioStream(RequestAudioStream {
+        assert_eq!(rx.recv().unwrap(), SmartSpeakerMessage::RequestAudioStream(AudioStreamMessage {
             send_from: SmartSpeakerActors::CoreActor,
             send_to: SmartSpeakerActors::CoreActor,
             stream: vec![],
@@ -66,12 +66,12 @@ mod core_actor_tests {
         let mut handler = CoreActorMessageHandler {
             debug: DebugData::new(false),
         };
-        let message = SmartSpeakerMessage::RequestStateUpdate(RequestStateUpdate {
+        let message = SmartSpeakerMessage::RequestStateUpdate(StateUpdateMessage {
             send_from: SmartSpeakerActors::CoreActor,
             send_to: SmartSpeakerActors::CoreActor,
             state: SmartSpeakerState::Attention,
         });
-        let state = handler.handle_message(senders, message);
+        let state = handler.handle_message(&senders, message);
         assert_eq!(state, CoreActorState::NewActorRequested { actor: SmartSpeakerActors::SpeechToIntentActor, custom_args: None });
     }
 
@@ -83,12 +83,12 @@ mod core_actor_tests {
         let mut handler = CoreActorMessageHandler {
             debug: DebugData::new(false),
         };
-        let message = SmartSpeakerMessage::RequestStateUpdate(RequestStateUpdate {
+        let message = SmartSpeakerMessage::RequestStateUpdate(StateUpdateMessage {
             send_from: SmartSpeakerActors::CoreActor,
             send_to: SmartSpeakerActors::CoreActor,
             state: SmartSpeakerState::Attention,
         });
-        let state = handler.handle_message(senders, message);
+        let state = handler.handle_message(&senders, message);
         assert_eq!(state, CoreActorState::NewActorRequested { actor: SmartSpeakerActors::WakeWordActor, custom_args: None });
     }
 }
