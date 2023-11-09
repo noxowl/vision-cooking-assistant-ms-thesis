@@ -63,12 +63,12 @@ pub(crate) enum GenericAction {
 
 #[derive(Debug, Clone)]
 pub(crate) struct DescribeExecutable {
-    pub(crate) tts_script: String,
+    pub(crate) tts_script: SmartSpeakerI18nText,
     pub(crate) current_contents: Option<IntentContent>,
 }
 
 impl DescribeExecutable {
-    pub(crate) fn new(text: String) -> Self {
+    pub(crate) fn new(text: SmartSpeakerI18nText) -> Self {
         DescribeExecutable {
             tts_script: text,
             current_contents: None,
@@ -128,14 +128,22 @@ impl StepExecutable for CountVisionObjectExecutable {
             None => {
                 Ok(SmartSpeakerTaskResult::with_tts(
                     SmartSpeakerTaskResultCode::Exit,
-                    "I don't see anything".to_string(),
+                    SmartSpeakerI18nText::new()
+                        .en("I can't see anything")
+                        .ja("何も見えませんでした")
+                        .zh("我什么都没看到")
+                        .ko("아무것도 보이지 않습니다"),
                 ))
             }
             Some(content) => {
                 let count = content.entities.len();
                 Ok(SmartSpeakerTaskResult::with_tts(
                     SmartSpeakerTaskResultCode::Exit,
-                    format!("I see {} {}", count, self.vision_action.to_string()),
+                    SmartSpeakerI18nText::new()
+                        .en(&format!("I see {} {}", count, self.vision_action.to_string()))
+                        .ja(&format!("{}個の{}が見えました", count, self.vision_action.to_string()))
+                        .zh(&format!("我看到了{}个{}", count, self.vision_action.to_string()))
+                        .ko(&format!("{}개의 {}가 보입니다", count, self.vision_action.to_string())),
                 ))
             }
         }

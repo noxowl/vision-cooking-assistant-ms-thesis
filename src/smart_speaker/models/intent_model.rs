@@ -1,6 +1,7 @@
 use std::fmt;
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
+use crate::smart_speaker::models::message_model::SmartSpeakerI18nText;
 
 pub(crate) trait IntentSlot: Send {
     fn clone_box(&self) -> Box<dyn IntentSlot>;
@@ -57,6 +58,18 @@ pub(crate) enum IntentCookingMenu {
     CarrotSalad,
 }
 
+impl IntentCookingMenu {
+    pub(crate) fn to_i18n(&self) -> SmartSpeakerI18nText {
+        match self {
+            IntentCookingMenu::CarrotSalad => SmartSpeakerI18nText::new()
+                .en("Carrot salad")
+                .ja("にんじんサラダ")
+                .zh("胡萝卜沙拉")
+                .ko("당근 샐러드")
+        }
+    }
+}
+
 impl IntentSlot for IntentCookingMenu {
     fn clone_box(&self) -> Box<dyn IntentSlot> {
         Box::new(self.clone())
@@ -77,6 +90,14 @@ impl FromStr for IntentCookingMenu {
             "にんじんのサラダ" => Ok(IntentCookingMenu::CarrotSalad),
             "にんじんりようり" => Ok(IntentCookingMenu::CarrotSalad),
             _ => Err(()),
+        }
+    }
+}
+
+impl Display for IntentCookingMenu {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        match self {
+            IntentCookingMenu::CarrotSalad => write!(f, "にんじんサラダ"),
         }
     }
 }

@@ -32,14 +32,14 @@ pub(crate) enum CookingAction {
 
 #[derive(Debug, Clone)]
 pub(crate) struct ExplainStepExecutable {
-    pub(crate) tts_script: String,
+    pub(crate) tts_script: SmartSpeakerI18nText,
     pub(crate) current_content: Option<IntentContent>,
 }
 
 impl ExplainStepExecutable {
-    pub(crate) fn new(text: String) -> Self {
+    pub(crate) fn new(text: SmartSpeakerI18nText) -> Self {
         ExplainStepExecutable {
-            tts_script: "".to_string(),
+            tts_script: text,
             current_content: None,
         }
     }
@@ -78,15 +78,15 @@ impl StepExecutable for ExplainStepExecutable {
 
 #[derive(Debug, Clone)]
 pub(crate) struct WaitForVisionStepExecutables {
-    pub(crate) tts_script: String,
+    pub(crate) tts_script: SmartSpeakerI18nText,
     pub(crate) vision_action: VisionAction,
     pub(crate) current_content: Option<VisionContent>,
 }
 
 impl WaitForVisionStepExecutables {
-    pub(crate) fn new(vision_action: VisionAction) -> Self {
+    pub(crate) fn new(text: SmartSpeakerI18nText, vision_action: VisionAction) -> Self {
         WaitForVisionStepExecutables {
-            tts_script: "".to_string(),
+            tts_script: text,
             vision_action,
             current_content: None,
         }

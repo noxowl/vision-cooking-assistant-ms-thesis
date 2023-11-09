@@ -32,6 +32,7 @@ impl MachineSpeechActor {
         write_log_message(&self.sender, SmartSpeakerActors::MachineSpeechActor, SmartSpeakerLogMessageType::Info("MachineSpeechActor started".to_string()));
         self.app.init().unwrap();
         write_log_message(&self.sender, SmartSpeakerActors::MachineSpeechActor, SmartSpeakerLogMessageType::Info(self.app.info()));
+
         self.speech(TextToSpeechMessageType::Boilerplate(MachineSpeechBoilerplate::PowerOn as usize), Some(SmartSpeakerActors::CoreActor));
         while self.alive {
             match self.callback_receiver.try_recv() {
@@ -61,12 +62,12 @@ impl MachineSpeechActor {
             speech_callback_actor.run();
         });
         match message {
-            TextToSpeechMessageType::Normal(text) => {
-                self.app.speak_with_callback(text, micro_tx);
+            TextToSpeechMessageType::Normal(i18n_text) => {
+                self.app.speak_with_callback(i18n_text, micro_tx);
             }
             TextToSpeechMessageType::Boilerplate(index) => {
                 self.app.speak_with_callback(
-                    MachineSpeechBoilerplate::try_from(index).unwrap().to_string_by_language(&self.app.language),
+                    MachineSpeechBoilerplate::try_from(index).unwrap().try_to_i18n().unwrap(),
                     micro_tx);
             }
         }
@@ -80,10 +81,6 @@ impl MachineSpeechActor {
             SmartSpeakerMessage::RequestTextToSpeech(message) => {
                 write_log_message(&self.sender, SmartSpeakerActors::MachineSpeechActor, SmartSpeakerLogMessageType::Debug(format!("RequestTextToSpeech({:?})", &message.message)));
                 self.speech(message.message, Some(message.send_from));
-            },
-            SmartSpeakerMessage::StringMessage(message) => {
-                write_log_message(&self.sender, SmartSpeakerActors::MachineSpeechActor, SmartSpeakerLogMessageType::Debug(format!("RequestTextToSpeech({:?})", &message.message)));
-                self.speech(TextToSpeechMessageType::Normal(message.message), None);
             },
             _ => {
                 dbg!("unhandled message");
@@ -125,11 +122,5 @@ impl MachineSpeechCallbackMicroActor {
             }
             thread::sleep(Duration::from_millis(1));
         }
-        // while let Ok(message) = self.receiver.recv() {
-        //     dbg!(format!("MachineSpeechCallbackMicroActor({:?}) got callback({:?})", &self.message, message));
-        //     if let Some(actor) = &self.message {
-        //         self.sender.send(actor.clone()).unwrap();
-        //     }
-        // }
     }
 }

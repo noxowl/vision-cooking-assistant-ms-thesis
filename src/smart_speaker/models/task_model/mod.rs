@@ -11,7 +11,7 @@ pub(crate) mod vision_cooking_task;
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct SmartSpeakerTaskResult {
     pub(crate) code: SmartSpeakerTaskResultCode,
-    pub(crate) tts: Option<String>,
+    pub(crate) tts: Option<SmartSpeakerI18nText>,
 }
 
 impl SmartSpeakerTaskResult {
@@ -22,7 +22,7 @@ impl SmartSpeakerTaskResult {
         }
     }
 
-    pub(crate) fn with_tts(code: SmartSpeakerTaskResultCode, tts: String) -> Self {
+    pub(crate) fn with_tts(code: SmartSpeakerTaskResultCode, tts: SmartSpeakerI18nText) -> Self {
         SmartSpeakerTaskResult {
             code,
             tts: Some(tts),

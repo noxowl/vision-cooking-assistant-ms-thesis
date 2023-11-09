@@ -222,7 +222,7 @@ impl ContextActor {
 
     }
 
-    fn request_text_to_speech(&self, text: String) {
+    fn request_text_to_speech(&self, text: SmartSpeakerI18nText) {
         text_to_speech_message(
             &self.sender,
             SmartSpeakerActors::ContextActor,

@@ -59,10 +59,7 @@ impl Task for VisionCookingTask {
                         match intent.intent {
                             IntentAction::Cancel => {
                                 let _ = self.exit();
-                                return Ok(SmartSpeakerTaskResult::with_tts(
-                                    SmartSpeakerTaskResultCode::Exit,
-                                    "cooking task exit".to_string(),
-                                ))
+                                return self.cancel()
                             }
                             _ => {
                             }
@@ -72,10 +69,7 @@ impl Task for VisionCookingTask {
                 let step = self.step.get_mut(self.current_step);
                 return match step {
                     None => {
-                        Ok(SmartSpeakerTaskResult::with_tts(
-                            SmartSpeakerTaskResultCode::Exit,
-                            "cooking task exit".to_string(),
-                        ))
+                        self.exit()
                     }
                     Some(step) => {
                         match &mut step.action {
@@ -96,10 +90,7 @@ impl Task for VisionCookingTask {
                                         match intent.intent {
                                             IntentAction::Cancel => {
                                                 let _ = self.exit();
-                                                Ok(SmartSpeakerTaskResult::with_tts(
-                                                    SmartSpeakerTaskResultCode::Exit,
-                                                    "cooking task exit".to_string(),
-                                                ))
+                                                self.cancel()
                                             }
                                             IntentAction::Confirm => {
                                                 match self.internal_move_next() {
@@ -109,10 +100,7 @@ impl Task for VisionCookingTask {
                                                                 SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
                                                         } else {
                                                             let _ = self.exit();
-                                                            Ok(SmartSpeakerTaskResult::with_tts(
-                                                                SmartSpeakerTaskResultCode::Exit,
-                                                                "cooking task exit".to_string(),
-                                                            ))
+                                                            self.exit()
                                                         }
                                                     }
                                                     Err(_) => {
@@ -170,21 +158,25 @@ impl Task for VisionCookingTask {
     fn exit(&self) -> Result<SmartSpeakerTaskResult> {
         Ok(SmartSpeakerTaskResult::with_tts(
             SmartSpeakerTaskResultCode::Exit,
-            "cooking task exit".to_string(),
+            SmartSpeakerI18nText::new()
+                .en("cooking task exit")
+                .ja("料理タスクを終了します。")
+                .zh("退出烹饪任务。")
+                .ko("요리 작업을 종료합니다."),
         ))
     }
 
     fn cancel(&self) -> Result<SmartSpeakerTaskResult> {
         Ok(SmartSpeakerTaskResult::with_tts(
             SmartSpeakerTaskResultCode::Cancelled,
-            "cooking task cancelled".to_string(),
+            SmartSpeakerI18nText::new()
+                .en("cooking task cancelled")
+                .ja("料理タスクをキャンセルします。")
+                .zh("取消烹饪任务。")
+                .ko("요리 작업을 취소합니다."),
         ))
     }
 }
-
-
-
-
 
 
 // pub(crate) struct Recipe {

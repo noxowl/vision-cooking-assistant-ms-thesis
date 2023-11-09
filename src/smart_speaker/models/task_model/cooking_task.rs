@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use crate::smart_speaker::models::core_model::PendingType;
 use crate::smart_speaker::models::intent_model::{IntentAction, IntentCookingMenu};
@@ -75,13 +76,47 @@ impl Task for CookingTask {
         dbg!("cooking task init");
         Ok(SmartSpeakerTaskResult::with_tts(
             SmartSpeakerTaskResultCode::Wait(PendingType::Speak),
-            "料理を始めます。準備ができたら「オッケー」などの答えで教えてください。".to_string()))
+            SmartSpeakerI18nText::new()
+                .en(&format!("Let's start cooking {}. Tell me when you ready with an answer such as 'ok'.", self.menu.to_i18n().en))
+                .ja(&format!("{}の調理を始めます。準備ができたら「オッケー」などの答えで教えてください。", self.menu.to_i18n().ja).to_string())
+                .zh(&format!("让我们开始做{}。准备好了就告诉我，比如说“好的”。", self.menu.to_i18n().zh).to_string())
+                .ko(&format!("{} 요리를 시작합니다. 준비가 되면 '오케이'와 같은 대답으로 알려주세요.", self.menu.to_i18n().ko).to_string()))
+        )
     }
 
     fn try_next(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {
+        let mut current_action: &CookingAction = &self.step[*&self.current_step].action;
+        match content {
+            None => {}
+            Some(content) => {
+                if let Some(intent_content) = content.as_any().downcast_ref::<IntentContent>() {
+                    match intent_content.intent {
+                        IntentAction::Cancel => {
+                            return self.cancel()
+                        }
+                        _ => {
+
+                        }
+                    }
+                }
+
+                if let Some(vision_content) = content.as_any().downcast_ref::<VisionContent>() {
+                    match &mut current_action {
+                        CookingAction::WaitForVision(executable) => {
+                            let mut exe = executable.clone();
+                            exe.feed(Box::new(vision_content.clone()))?;
+                            let result = exe.execute();
+                            return result
+                        }
+                        _ => {}
+                    }
+                }
+            }
+        }
         Ok(SmartSpeakerTaskResult::new(
-                    SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone()))
-                )
+            SmartSpeakerTaskResultCode::Wait(
+                self.step[*&self.current_step].waiting_for.clone()))
+        )
         // match content {
         //     None => {
         //         Ok(SmartSpeakerTaskResult::new(
@@ -206,14 +241,22 @@ impl Task for CookingTask {
     fn exit(&self) -> Result<SmartSpeakerTaskResult> {
         Ok(SmartSpeakerTaskResult::with_tts(
             SmartSpeakerTaskResultCode::Exit,
-            "cooking task exit".to_string(),
+            SmartSpeakerI18nText::new()
+                .en("cooking task exit")
+                .ja("料理タスクを終了します。")
+                .zh("退出烹饪任务。")
+                .ko("요리 작업을 종료합니다."),
         ))
     }
 
     fn cancel(&self) -> Result<SmartSpeakerTaskResult> {
         Ok(SmartSpeakerTaskResult::with_tts(
             SmartSpeakerTaskResultCode::Cancelled,
-            "cooking task cancelled".to_string(),
+            SmartSpeakerI18nText::new()
+                .en("cooking task cancelled")
+                .ja("料理タスクをキャンセルします。")
+                .zh("取消烹饪任务。")
+                .ko("요리 작업을 취소합니다."),
         ))
     }
 }

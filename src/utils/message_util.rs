@@ -135,11 +135,11 @@ pub(crate) fn vision_finalized_message(sender: &mpsc::Sender<SmartSpeakerMessage
 pub(crate) fn text_to_speech_message(sender: &mpsc::Sender<SmartSpeakerMessage>,
                                      send_from: SmartSpeakerActors,
                                      send_to: SmartSpeakerActors,
-                                     message: String) {
+                                     i18n: SmartSpeakerI18nText) {
     match sender.send(SmartSpeakerMessage::RequestTextToSpeech(TextToSpeechMessage {
         send_from,
         send_to,
-        message: TextToSpeechMessageType::Normal(message),
+        message: TextToSpeechMessageType::Normal(i18n),
     })) {
         Ok(_) => {}
         Err(e) => {

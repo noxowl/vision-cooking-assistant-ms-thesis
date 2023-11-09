@@ -118,6 +118,8 @@ impl Config {
 pub(crate) enum LanguageTag {
     English,
     Japanese,
+    Chinese,
+    Korean,
 }
 
 impl LanguageTag {
@@ -125,6 +127,8 @@ impl LanguageTag {
         match self {
             LanguageTag::English => "en-US",
             LanguageTag::Japanese => "ja-JP",
+            LanguageTag::Chinese => "zh-CN",
+            LanguageTag::Korean => "ko-KR",
         }
     }
 
@@ -132,6 +136,8 @@ impl LanguageTag {
         match s {
             "en" | "en-US" => LanguageTag::English,
             "ja" | "ja-JP" => LanguageTag::Japanese,
+            "zh" | "zh-CN" => LanguageTag::Chinese,
+            "ko" | "ko-KR" => LanguageTag::Korean,
             _ => LanguageTag::English,
         }
     }

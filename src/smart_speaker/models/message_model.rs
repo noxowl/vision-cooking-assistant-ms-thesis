@@ -1,6 +1,7 @@
 use crate::smart_speaker::models::core_model::SmartSpeakerState;
 use crate::smart_speaker::models::intent_model::{IntentAction, IntentSlot};
 use crate::smart_speaker::models::vision_model::{VisionAction, VisionSlot};
+use crate::utils::config_util::LanguageTag;
 
 #[derive(Debug, Hash, Eq, PartialEq, Clone)]
 pub(crate) enum SmartSpeakerActors {
@@ -125,8 +126,56 @@ pub(crate) struct TextToSpeechMessage {
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum TextToSpeechMessageType {
-    Normal(String),
+    Normal(SmartSpeakerI18nText),
     Boilerplate(usize),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) struct SmartSpeakerI18nText {
+    pub en: String,
+    pub ja: String,
+    pub zh: String,
+    pub ko: String,
+}
+
+impl SmartSpeakerI18nText {
+    pub(crate) fn new() -> Self {
+        Self {
+            en: "".to_string(),
+            ja: "".to_string(),
+            zh: "".to_string(),
+            ko: "".to_string(),
+        }
+    }
+
+    pub(crate) fn en(mut self, en: &str) -> Self {
+        self.en = en.to_string();
+        self
+    }
+
+    pub(crate) fn ja(mut self, ja: &str) -> Self {
+        self.ja = ja.to_string();
+        self
+    }
+
+    pub(crate) fn zh(mut self, zh: &str) -> Self {
+        self.zh = zh.to_string();
+        self
+    }
+
+    pub(crate) fn ko(mut self, ko: &str) -> Self {
+        self.ko = ko.to_string();
+        self
+    }
+
+    pub(crate) fn get(&self, language: &LanguageTag) -> String {
+        match language {
+            LanguageTag::English => self.en.clone(),
+            LanguageTag::Japanese => self.ja.clone(),
+            LanguageTag::Chinese => self.zh.clone(),
+            LanguageTag::Korean => self.ko.clone(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
