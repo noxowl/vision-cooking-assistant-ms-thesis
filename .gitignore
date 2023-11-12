@@ -19,3 +19,4 @@ ar_*.png
 .DS_Store
 .env
 .idea
+/log
