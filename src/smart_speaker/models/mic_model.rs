@@ -106,7 +106,7 @@ pub(crate) struct SpeechToIntent {
 impl SpeechToIntent {
     pub fn new(api_key: String, context_path: String) -> Self {
         Self {
-            app: RhinoBuilder::new(api_key, context_path).model_path("rhino_params_ja.pv").init().unwrap(),
+            app: RhinoBuilder::new(api_key, context_path).model_path("picovoice_data/rhino_params_ja.pv").init().unwrap(),
         }
     }
 

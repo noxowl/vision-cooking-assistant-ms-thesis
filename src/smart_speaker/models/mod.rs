@@ -10,3 +10,4 @@ pub(crate) mod core_model;
 pub(crate) mod task_model;
 pub(crate) mod step_model;
 pub(crate) mod message_model;
+pub(crate) mod revision_model;

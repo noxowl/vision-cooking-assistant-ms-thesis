@@ -2,6 +2,7 @@ use std::fmt;
 use std::fmt::{Debug, Display, Formatter};
 use std::str::FromStr;
 use crate::smart_speaker::models::message_model::SmartSpeakerI18nText;
+use crate::smart_speaker::models::task_model::cooking_task::{CookingIngredient, CookingIngredientName, CookingIngredientAmount};
 
 pub(crate) trait IntentSlot: Send {
     fn clone_box(&self) -> Box<dyn IntentSlot>;
@@ -53,7 +54,7 @@ impl FromStr for IntentPlace {
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub(crate) enum IntentCookingMenu {
     CarrotSalad,
 }
@@ -66,6 +67,25 @@ impl IntentCookingMenu {
                 .ja("にんじんサラダ")
                 .zh("胡萝卜沙拉")
                 .ko("당근 샐러드")
+        }
+    }
+
+    pub(crate) fn to_ingredient(&self) -> Vec<CookingIngredient> {
+        match self {
+            IntentCookingMenu::CarrotSalad => vec![
+                CookingIngredient::new(
+                    CookingIngredientName::Carrot,
+                    CookingIngredientAmount::MilliGram(1000)),
+                CookingIngredient::new(
+                    CookingIngredientName::Salt,
+                    CookingIngredientAmount::MilliGram(5)),
+                CookingIngredient::new(
+                    CookingIngredientName::Pepper,
+                    CookingIngredientAmount::MilliGram(5)),
+                CookingIngredient::new(
+                    CookingIngredientName::SesameOil,
+                    CookingIngredientAmount::MilliLiter(5)),
+            ],
         }
     }
 }

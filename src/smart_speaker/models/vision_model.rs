@@ -2,6 +2,7 @@ use std::fmt;
 use std::fmt::{Debug, Formatter};
 use opencv::core::Mat;
 use anyhow::Result;
+use crate::smart_speaker::models::message_model::SmartSpeakerI18nText;
 use crate::utils::camera_util::Camera;
 use crate::utils::pupil_util::Pupil;
 use crate::utils::vision_util::VisionType;
@@ -98,54 +99,63 @@ impl CaptureSource for CameraCaptureSource {
     }
 }
 
-
-// pub(crate) struct DetectedMarker {
-//     pub corner: VectorOfPoint2f,
-//     pub id: i32,
-//     pub centroid: Point2f,
-// }
-//
-// impl DetectedMarker {
-//     fn new(corner: Vector<Point2f>, id: i32, centroid: Point2f) -> Self {
-//         Self {
-//             corner,
-//             id,
-//             centroid,
-//         }
-//     }
-//
-//     fn update(mut self, corner: Vector<Point2f>, id: i32, centroid: Point2f) {
-//         self.corner = corner;
-//         self.id = id;
-//         self.centroid = centroid;
-//     }
-//
-//     fn default() -> Self {
-//         Self {
-//             corner: Default::default(),
-//             id: 0,
-//             centroid: Default::default(),
-//         }
-//     }
-// }
-
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub(crate) enum DetectableObject {
     Carrot,
     HumanSkin,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+impl DetectableObject {
+    pub(crate) fn to_i18n(&self) -> SmartSpeakerI18nText {
+        match self {
+            DetectableObject::Carrot => {
+                SmartSpeakerI18nText::new()
+                    .en("carrot")
+                    .ja("にんじん")
+                    .zh("胡萝卜")
+                    .ko("당근")
+            }
+            DetectableObject::HumanSkin => {
+                SmartSpeakerI18nText::new()
+                    .en("human skin")
+                    .ja("人肌")
+                    .zh("人皮")
+                    .ko("인간의 피부")
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub(crate) enum VisionAction {
     None,
     ObjectDetectionWithAruco(DetectableObject),
 }
 
-impl std::fmt::Display for VisionAction {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+impl VisionAction {
+    pub(crate) fn to_i18n(&self) -> SmartSpeakerI18nText {
         match self {
-            VisionAction::None => write!(f, "None"),
-            VisionAction::ObjectDetectionWithAruco(detectable) => write!(f, "ObjectDetectionWithAruco({:?})", detectable),
+            VisionAction::None => {
+                SmartSpeakerI18nText::new()
+                    .en("nothing")
+                    .ja("何も")
+                    .zh("什么都没有")
+                    .ko("아무것도 없음")
+            }
+            VisionAction::ObjectDetectionWithAruco(object) => {
+                SmartSpeakerI18nText::new()
+                    .en(&format!("{} with aruco", object.to_i18n().en))
+                    .ja(&format!("アルコで{}を検出", object.to_i18n().ja))
+                    .zh(&format!("使用 aruco 检测{}", object.to_i18n().zh))
+                    .ko(&format!("aruco로 {}를 감지", object.to_i18n().ko))
+            }
+        }
+    }
+
+    pub(crate) fn expose_object(&self) -> Option<DetectableObject> {
+        match self {
+            VisionAction::None => { None }
+            VisionAction::ObjectDetectionWithAruco(object) => { Some(object.clone()) }
         }
     }
 }
@@ -214,8 +224,3 @@ impl VisionObjectSize {
         }
     }
 }
-
-// #[derive(Debug, Clone, PartialEq)]
-// pub(crate) enum VisionObject {
-// }
-

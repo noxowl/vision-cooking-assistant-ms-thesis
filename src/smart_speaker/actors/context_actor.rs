@@ -4,7 +4,7 @@ use std::time::Duration;
 use crate::smart_speaker::models::core_model::{PendingType, SmartSpeakerState};
 use crate::smart_speaker::models::intent_model::IntentAction;
 use crate::smart_speaker::models::speak_model::MachineSpeechBoilerplate;
-use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, Task, cooking_task::CookingTask, vision_cooking_task::VisionCookingTask, vision_viewing_task::VisionViewingTask, SmartSpeakerTaskResultCode};
+use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, Task, cooking_task::CookingTask, vision_viewing_task::VisionViewingTask, SmartSpeakerTaskResultCode};
 use crate::smart_speaker::models::message_model::*;
 use crate::utils::message_util::*;
 
@@ -77,11 +77,7 @@ impl ContextActor {
             }
             IntentAction::CookingTask => {
                 write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Info("start cooking task".to_string()));
-                if self.vision {
-                    self.current_task = Some(Box::new(VisionCookingTask::new(content).unwrap()))
-                } else {
-                    self.current_task = Some(Box::new(CookingTask::new(content).unwrap()))
-                }
+                self.current_task = Some(Box::new(CookingTask::new(content, self.vision).unwrap()))
             }
             _ => {
                 dbg!(content);
@@ -163,6 +159,8 @@ impl ContextActor {
                 self.request_text_to_speech_boilerplate(MachineSpeechBoilerplate::Aborted as usize);
                 self.set_next_state(SmartSpeakerState::Idle)
             }
+            SmartSpeakerTaskResultCode::RepeatPrevious => {}
+            SmartSpeakerTaskResultCode::ForceNext => {}
         }
         match result.tts {
             None => {

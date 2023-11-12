@@ -67,7 +67,7 @@ impl MachineSpeechActor {
             }
             TextToSpeechMessageType::Boilerplate(index) => {
                 self.app.speak_with_callback(
-                    MachineSpeechBoilerplate::try_from(index).unwrap().try_to_i18n().unwrap(),
+                    MachineSpeechBoilerplate::try_from(index).unwrap().to_i18n(),
                     micro_tx);
             }
         }

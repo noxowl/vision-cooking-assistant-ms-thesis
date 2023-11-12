@@ -1,11 +1,12 @@
 use anyhow::Result;
-use crate::smart_speaker::models::intent_model::IntentAction;
-use crate::smart_speaker::models::step_model::generic_step::{CountVisionObjectExecutable, GenericAction, GenericStep};
+use crate::smart_speaker::models::core_model::PendingType;
+use crate::smart_speaker::models::step_model::generic_step::{ActionExecutable, CountVisionObjectAction};
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, Task};
 use crate::smart_speaker::models::message_model::*;
+use crate::smart_speaker::models::speak_model::MachineSpeechBoilerplate;
 
 pub(crate) struct VisionViewingTask {
-    pub(crate) step: Vec<GenericStep>,
+    pub(crate) step: Vec<Box<dyn ActionExecutable>>,
     pub(crate) current_step: usize,
 }
 
@@ -13,7 +14,7 @@ impl VisionViewingTask {
     pub(crate) fn new() -> Result<Self> {
         Ok(Self {
             step: vec![
-                GenericStep::new(GenericAction::WaitForVision(Box::new(CountVisionObjectExecutable::new()))),
+                Box::new(CountVisionObjectAction::new()),
             ],
             current_step: 0,
         })
@@ -24,7 +25,7 @@ impl Task for VisionViewingTask {
     fn init(&mut self) -> Result<SmartSpeakerTaskResult> {
         Ok(SmartSpeakerTaskResult::with_tts(
             SmartSpeakerTaskResultCode::Wait(
-                self.step[*&self.current_step].waiting_for.clone()),
+                self.step[*&self.current_step].get_pending_type()),
             SmartSpeakerI18nText::new()
                 .en("Checking...")
                 .ja("確認しています。")
@@ -34,36 +35,32 @@ impl Task for VisionViewingTask {
     }
 
     fn try_next(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {
-        let mut current_action: &GenericAction = &self.step[*&self.current_step].action;
+        let mut current_action = self.step[*&self.current_step].clone();
         match content {
-            None => {}
-            Some(content) => {
-                if let Some(intent_content) = content.as_any().downcast_ref::<IntentContent>() {
-                    match intent_content.intent {
-                        IntentAction::Cancel => {
-                            return self.cancel()
-                        }
-                        _ => {}
+            None => {
+                match current_action.get_pending_type(){
+                    PendingType::Speak => {
+                        return Ok(SmartSpeakerTaskResult::with_tts(
+                            SmartSpeakerTaskResultCode::Wait(
+                                current_action.get_pending_type()),
+                            MachineSpeechBoilerplate::IntentFailed.to_i18n(),
+                        ))
                     }
-                }
-
-                if let Some(vision_content) = content.as_any().downcast_ref::<VisionContent>() {
-                    match &mut current_action {
-                        GenericAction::WaitForVision(executable) => {
-                            let mut exe = executable.clone();
-                            exe.feed(Box::new(vision_content.clone()))?;
-                            let result = exe.execute();
-                            return result
-                        }
-                        _ => {}
+                    PendingType::Vision(_) => {
+                        return Ok(SmartSpeakerTaskResult::with_tts(
+                            SmartSpeakerTaskResultCode::Wait(
+                                current_action.get_pending_type()),
+                            MachineSpeechBoilerplate::VisionFailed.to_i18n(),
+                        ))
                     }
                 }
             }
+            Some(content) => {
+                current_action.feed(content, None)?;
+                let result = current_action.execute();
+                return result
+            }
         }
-        Ok(SmartSpeakerTaskResult::new(
-            SmartSpeakerTaskResultCode::Wait(
-                self.step[*&self.current_step].waiting_for.clone()))
-        )
     }
 
     fn failed(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {

@@ -2,7 +2,7 @@ use std::fmt::Debug;
 use anyhow::Result;
 use crate::smart_speaker::models::core_model::PendingType;
 use crate::smart_speaker::models::message_model::*;
-use crate::utils::message_util::*;
+use crate::smart_speaker::models::revision_model::Revision;
 
 pub(crate) mod cooking_task;
 pub(crate) mod vision_viewing_task;
@@ -12,6 +12,7 @@ pub(crate) mod vision_cooking_task;
 pub(crate) struct SmartSpeakerTaskResult {
     pub(crate) code: SmartSpeakerTaskResultCode,
     pub(crate) tts: Option<SmartSpeakerI18nText>,
+    pub(crate) revision: Option<Box<dyn Revision>>
 }
 
 impl SmartSpeakerTaskResult {
@@ -19,6 +20,7 @@ impl SmartSpeakerTaskResult {
         SmartSpeakerTaskResult {
             code,
             tts: None,
+            revision: None,
         }
     }
 
@@ -26,6 +28,15 @@ impl SmartSpeakerTaskResult {
         SmartSpeakerTaskResult {
             code,
             tts: Some(tts),
+            revision: None,
+        }
+    }
+
+    pub(crate) fn with_tts_and_revision(code: SmartSpeakerTaskResultCode, tts: SmartSpeakerI18nText, revision: Box<dyn Revision>) -> Self {
+        SmartSpeakerTaskResult {
+            code,
+            tts: Some(tts),
+            revision: Some(revision),
         }
     }
 }
@@ -33,7 +44,9 @@ impl SmartSpeakerTaskResult {
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) enum SmartSpeakerTaskResultCode {
     Exit,
+    RepeatPrevious,
     Wait(PendingType),
+    ForceNext,
     Cancelled,
 }
 

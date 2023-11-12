@@ -103,44 +103,43 @@ impl MachineSpeechBoilerplate {
         }
     }
 
-    pub(crate) fn try_to_i18n(&self) -> Result<SmartSpeakerI18nText> {
+    pub(crate) fn to_i18n(&self) -> SmartSpeakerI18nText {
         match self {
-            Self::PowerOn => Ok(SmartSpeakerI18nText::new()
+            Self::PowerOn => SmartSpeakerI18nText::new()
                 .en("I started up.")
                 .ja("起動しました。")
                 .zh("我已经启动了。")
-                .ko("기동했습니다.")),
-            Self::WakeUp => Ok(SmartSpeakerI18nText::new()
+                .ko("기동했습니다."),
+            Self::WakeUp => SmartSpeakerI18nText::new()
                 .en("I'm listening.")
                 .ja("聞いています。")
                 .zh("我在听。")
-                .ko("듣고 있습니다.")),
-            Self::Ok => Ok(SmartSpeakerI18nText::new()
+                .ko("듣고 있습니다."),
+            Self::Ok => SmartSpeakerI18nText::new()
                 .en("Ok.")
                 .ja("わかりました。")
                 .zh("好的。")
-                .ko("알겠습니다.")),
-            Self::Undefined => Ok(SmartSpeakerI18nText::new()
+                .ko("알겠습니다."),
+            Self::Undefined => SmartSpeakerI18nText::new()
                 .en("Sorry. I don't understand.")
                 .ja("すみません。わからない命令です。")
                 .zh("对不起。我不明白。")
-                .ko("죄송합니다. 이해할 수 없는 명령입니다.")),
-            Self::Aborted => Ok(SmartSpeakerI18nText::new()
+                .ko("죄송합니다. 이해할 수 없는 명령입니다."),
+            Self::Aborted => SmartSpeakerI18nText::new()
                 .en("Aborted.")
                 .ja("中止します。")
                 .zh("中止。")
-                .ko("중단합니다.")),
-            Self::IntentFailed => Ok(SmartSpeakerI18nText::new()
+                .ko("중단합니다."),
+            Self::IntentFailed => SmartSpeakerI18nText::new()
                 .en("Sorry. I can't hear you very well. Please repeat your message")
                 .ja("すみません。よく聞こえないです。もう一度おっしゃってください。")
                 .zh("对不起。我听不清楚。请再说一遍。")
-                .ko("죄송합니다. 잘 들리지 않습니다. 다시 말씀해주세요.")),
-            Self::VisionFailed => Ok(SmartSpeakerI18nText::new()
+                .ko("죄송합니다. 잘 들리지 않습니다. 다시 말씀해주세요."),
+            Self::VisionFailed => SmartSpeakerI18nText::new()
                 .en("Sorry. I can't see very well. Please show me again.")
                 .ja("すみません。よく見えないです。もう一度見せてください。")
                 .zh("对不起。我看不清楚。请再给我看一遍。")
-                .ko("죄송합니다. 잘 보이지 않습니다. 다시 보여주세요.")),
-            _ => Err(anyhow!("invalid index"))
+                .ko("죄송합니다. 잘 보이지 않습니다. 다시 보여주세요."),
         }
     }
 }

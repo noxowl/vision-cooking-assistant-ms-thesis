@@ -4,79 +4,68 @@ use crate::smart_speaker::models::core_model::PendingType;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode};
 use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction};
 use crate::smart_speaker::models::message_model::*;
-use crate::utils::message_util::*;
+use crate::smart_speaker::models::revision_model::Revision;
 
 #[derive(Debug, Clone)]
-pub(crate) struct GenericStep {
-    pub(crate) waiting_for: PendingType,
-    pub(crate) action: GenericAction,
+pub(crate) enum ActionType {
+    None,
+    Confirm,
+    Vision(Vec<VisionAction>),
 }
 
-impl GenericStep {
-    pub(crate) fn new(action: GenericAction) -> Self {
-        let pending_type = match &action {
-            GenericAction::None => PendingType::Speak,
-            GenericAction::Explain(_) => PendingType::Speak,
-            GenericAction::WaitForConfirm => PendingType::Speak,
-            GenericAction::WaitForVision(executable) => PendingType::Vision(executable.try_expose_vision_actions().unwrap()),
-        };
-        GenericStep {
-            waiting_for: pending_type,
-            action
+pub(crate) trait ActionExecutable: Send {
+    fn execute(&self) -> Result<SmartSpeakerTaskResult>;
+    fn feed(&mut self, content: Box<dyn Content>, revision: Option<Box<dyn Revision>>) -> Result<()>;
+    fn clone_box(&self) -> Box<dyn ActionExecutable>;
+    fn as_any(&self) -> &dyn std::any::Any;
+    fn get_action_type(&self) -> ActionType;
+    fn get_pending_type(&self) -> PendingType {
+        match self.get_action_type() {
+            ActionType::None => PendingType::Speak,
+            ActionType::Confirm => PendingType::Speak,
+            ActionType::Vision(actions) => PendingType::Vision(actions.clone()),
         }
     }
-}
-
-pub(crate) trait StepExecutable: Send {
-    fn execute(&self) -> Result<SmartSpeakerTaskResult>;
-    fn feed(&mut self, content: Box<dyn Content>) -> Result<()>;
-    fn clone_box(&self) -> Box<dyn StepExecutable>;
-    fn as_any(&self) -> &dyn std::any::Any;
+    fn expose_tts_script(&self) -> Result<SmartSpeakerI18nText>;
     fn try_expose_vision_actions(&self) -> Result<Vec<VisionAction>>;
 }
 
-impl Debug for dyn StepExecutable {
+impl Debug for dyn ActionExecutable {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        write!(f, "StepExecutable")
+        write!(f, "ActionExecutable")
     }
 }
 
-impl PartialEq for dyn StepExecutable {
+impl PartialEq for dyn ActionExecutable {
     fn eq(&self, _: &Self) -> bool {
         true
     }
 }
 
-impl Clone for Box<dyn StepExecutable> {
+impl Clone for Box<dyn ActionExecutable> {
     fn clone(&self) -> Self {
         self.clone_box()
     }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) enum GenericAction {
-    None,
-    Explain(DescribeExecutable),
-    WaitForConfirm,
-    WaitForVision(Box<dyn StepExecutable>),
-}
-
-#[derive(Debug, Clone)]
-pub(crate) struct DescribeExecutable {
+pub(crate) struct GenericAction {
     pub(crate) tts_script: SmartSpeakerI18nText,
     pub(crate) current_contents: Option<IntentContent>,
+    pub(crate) current_revisions: Option<Box<dyn Revision>>,
 }
 
-impl DescribeExecutable {
+impl GenericAction {
     pub(crate) fn new(text: SmartSpeakerI18nText) -> Self {
-        DescribeExecutable {
+        GenericAction {
             tts_script: text,
             current_contents: None,
+            current_revisions: None,
         }
     }
 }
 
-impl StepExecutable for DescribeExecutable {
+impl ActionExecutable for GenericAction {
     fn execute(&self) -> Result<SmartSpeakerTaskResult> {
         Ok(SmartSpeakerTaskResult::with_tts(
             SmartSpeakerTaskResultCode::Exit,
@@ -84,7 +73,7 @@ impl StepExecutable for DescribeExecutable {
         ))
     }
 
-    fn feed(&mut self, content: Box<dyn Content>) -> Result<()> {
+    fn feed(&mut self, content: Box<dyn Content>, revision: Option<Box<dyn Revision>>) -> Result<()> {
         match content.as_any().downcast_ref::<IntentContent>() {
             None => {}
             Some(intent) => {
@@ -94,12 +83,20 @@ impl StepExecutable for DescribeExecutable {
         Ok(())
     }
 
-    fn clone_box(&self) -> Box<dyn StepExecutable> {
+    fn clone_box(&self) -> Box<dyn ActionExecutable> {
         Box::new(self.clone())
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn get_action_type(&self) -> ActionType {
+        ActionType::None
+    }
+
+    fn expose_tts_script(&self) -> Result<SmartSpeakerI18nText> {
+        Ok(self.tts_script.clone())
     }
 
     fn try_expose_vision_actions(&self) -> Result<Vec<VisionAction>> {
@@ -108,21 +105,21 @@ impl StepExecutable for DescribeExecutable {
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct CountVisionObjectExecutable {
+pub(crate) struct CountVisionObjectAction {
     pub(crate) vision_action: VisionAction,
     pub(crate) current_content: Option<VisionContent>,
 }
 
-impl CountVisionObjectExecutable {
+impl CountVisionObjectAction {
     pub(crate) fn new() -> Self {
-        CountVisionObjectExecutable {
+        CountVisionObjectAction {
             vision_action: VisionAction::ObjectDetectionWithAruco(DetectableObject::Carrot),
             current_content: None,
         }
     }
 }
 
-impl StepExecutable for CountVisionObjectExecutable {
+impl ActionExecutable for CountVisionObjectAction {
     fn execute(&self) -> Result<SmartSpeakerTaskResult> {
         match &self.current_content {
             None => {
@@ -140,16 +137,16 @@ impl StepExecutable for CountVisionObjectExecutable {
                 Ok(SmartSpeakerTaskResult::with_tts(
                     SmartSpeakerTaskResultCode::Exit,
                     SmartSpeakerI18nText::new()
-                        .en(&format!("I see {} {}", count, self.vision_action.to_string()))
-                        .ja(&format!("{}個の{}が見えました", count, self.vision_action.to_string()))
-                        .zh(&format!("我看到了{}个{}", count, self.vision_action.to_string()))
-                        .ko(&format!("{}개의 {}가 보입니다", count, self.vision_action.to_string())),
+                        .en(&format!("I see {} {}", count, self.vision_action.to_i18n().en))
+                        .ja(&format!("{}個の{}が見えました", count, self.vision_action.to_i18n().ja))
+                        .zh(&format!("我看到了{}个{}", count, self.vision_action.to_i18n().zh))
+                        .ko(&format!("{}개의 {}가 보입니다", count, self.vision_action.to_i18n().ko)),
                 ))
             }
         }
     }
 
-    fn feed(&mut self, content: Box<dyn Content>) -> Result<()> {
+    fn feed(&mut self, content: Box<dyn Content>, revision: Option<Box<dyn Revision>>) -> Result<()> {
         match content.as_any().downcast_ref::<VisionContent>() {
             None => {}
             Some(vision) => {
@@ -159,12 +156,24 @@ impl StepExecutable for CountVisionObjectExecutable {
         Ok(())
     }
 
-    fn clone_box(&self) -> Box<dyn StepExecutable> {
+    fn clone_box(&self) -> Box<dyn ActionExecutable> {
         Box::new(self.clone())
     }
 
     fn as_any(&self) -> &dyn std::any::Any {
         self
+    }
+
+    fn get_action_type(&self) -> ActionType {
+        ActionType::Vision(vec![self.vision_action.clone()])
+    }
+
+    fn expose_tts_script(&self) -> Result<SmartSpeakerI18nText> {
+        Ok(SmartSpeakerI18nText::new()
+            .en("I can't see anything")
+            .ja("何も見えませんでした")
+            .zh("我什么都没看到")
+            .ko("아무것도 보이지 않습니다"))
     }
 
     fn try_expose_vision_actions(&self) -> Result<Vec<VisionAction>> {

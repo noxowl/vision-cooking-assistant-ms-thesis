@@ -1,23 +1,36 @@
-use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use crate::smart_speaker::models::core_model::PendingType;
 use crate::smart_speaker::models::intent_model::{IntentAction, IntentCookingMenu};
-use crate::smart_speaker::models::step_model::cooking_step::{CookingAction, CookingStep};
-use crate::smart_speaker::models::step_model::generic_step::StepExecutable;
+use crate::smart_speaker::models::step_model::generic_step::ActionExecutable;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, Task};
 use crate::smart_speaker::models::message_model::*;
-use crate::utils::message_util::*;
+use crate::smart_speaker::models::revision_model::Revision;
+use crate::smart_speaker::models::speak_model::MachineSpeechBoilerplate;
+use crate::smart_speaker::models::step_model::cooking_step::CookingStepBuilder;
 
-pub(crate) struct CookingTaskIngredient {
-    pub(crate) name: CookingTaskIngredientName,
-    pub(crate) unit: CookingTaskIngredientAmount,
+#[derive(Debug, Clone)]
+pub(crate) struct CookingIngredient {
+    pub(crate) name: CookingIngredientName,
+    pub(crate) unit: CookingIngredientAmount,
 }
 
-pub(crate) enum CookingTaskIngredientName {
+impl CookingIngredient {
+    pub(crate) fn new(name: CookingIngredientName, unit: CookingIngredientAmount) -> Self {
+        CookingIngredient {
+            name,
+            unit,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum CookingIngredientName {
     Salt,
     Pepper,
     Sugar,
     SoySauce,
+    Sesame,
+    SesameOil,
     Miso,
     Sake,
     Mirin,
@@ -25,41 +38,32 @@ pub(crate) enum CookingTaskIngredientName {
     Onion,
 }
 
-pub(crate) enum CookingTaskIngredientAmount {
+#[derive(Debug, Clone)]
+pub(crate) enum CookingIngredientAmount {
     MilliGram(i32),
-    Milliliter(i32),
+    MilliLiter(i32),
     Piece(i32),
 }
 
-pub(crate) enum CookingTaskIngredientRevision {
-    Add(CookingTaskIngredient),
-    Remove(CookingTaskIngredient),
-    Update(CookingTaskIngredient),
-}
-
-
 pub(crate) struct CookingTask {
     pub(crate) menu: IntentCookingMenu,
-    pub(crate) step: Vec<CookingStep>,
+    pub(crate) step: Vec<Box<dyn ActionExecutable>>,
     pub(crate) current_step: usize,
-    pub(crate) ingredients: Vec<CookingTaskIngredient>,
-    pub(crate) ingredient_revision: Vec<CookingTaskIngredientRevision>,
-    pub(crate) waiting_content: PendingType,
+    pub(crate) last_revision: Option<Box<dyn Revision>>,
     pub(crate) checkpoint: usize,
 }
 
 impl CookingTask {
-    pub(crate) fn new(content: IntentContent) -> Result<Self> {
+    pub(crate) fn new(content: IntentContent, vision: bool) -> Result<Self> {
         match content.entities.get(0) {
             None => { Err(anyhow!("failed")) }
             Some(entity) => {
+                let menu = entity.as_any().downcast_ref::<IntentCookingMenu>().unwrap().clone();
                 Ok(CookingTask {
-                    menu: entity.as_any().downcast_ref::<IntentCookingMenu>().unwrap().clone(),
-                    step: vec![],
+                    menu,
+                    step: CookingStepBuilder::new(vision).build(menu),
                     current_step: 0,
-                    ingredients: vec![],
-                    ingredient_revision: vec![],
-                    waiting_content: PendingType::Speak,
+                    last_revision: None,
                     checkpoint: 0,
                 })
             }
@@ -73,160 +77,95 @@ impl CookingTask {
 
 impl Task for CookingTask {
     fn init(&mut self) -> Result<SmartSpeakerTaskResult> {
-        dbg!("cooking task init");
-        Ok(SmartSpeakerTaskResult::with_tts(
-            SmartSpeakerTaskResultCode::Wait(PendingType::Speak),
-            SmartSpeakerI18nText::new()
-                .en(&format!("Let's start cooking {}. Tell me when you ready with an answer such as 'ok'.", self.menu.to_i18n().en))
-                .ja(&format!("{}の調理を始めます。準備ができたら「オッケー」などの答えで教えてください。", self.menu.to_i18n().ja).to_string())
-                .zh(&format!("让我们开始做{}。准备好了就告诉我，比如说“好的”。", self.menu.to_i18n().zh).to_string())
-                .ko(&format!("{} 요리를 시작합니다. 준비가 되면 '오케이'와 같은 대답으로 알려주세요.", self.menu.to_i18n().ko).to_string()))
-        )
+        self.try_next(Some(Box::new(IntentContent::new(IntentAction::Next, vec![]))))
     }
 
     fn try_next(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {
-        let mut current_action: &CookingAction = &self.step[*&self.current_step].action;
+        let mut current_action = self.step[*&self.current_step].clone();
         match content {
-            None => {}
-            Some(content) => {
-                if let Some(intent_content) = content.as_any().downcast_ref::<IntentContent>() {
-                    match intent_content.intent {
-                        IntentAction::Cancel => {
-                            return self.cancel()
-                        }
-                        _ => {
-
-                        }
+            None => {
+                match current_action.get_pending_type(){
+                    PendingType::Speak => {
+                        return Ok(SmartSpeakerTaskResult::with_tts(
+                            SmartSpeakerTaskResultCode::Wait(
+                                current_action.get_pending_type()),
+                            MachineSpeechBoilerplate::IntentFailed.to_i18n(),
+                        ))
+                    }
+                    PendingType::Vision(_) => {
+                        return Ok(SmartSpeakerTaskResult::with_tts(
+                            SmartSpeakerTaskResultCode::Wait(
+                                current_action.get_pending_type()),
+                            MachineSpeechBoilerplate::VisionFailed.to_i18n(),
+                        ))
                     }
                 }
-
-                if let Some(vision_content) = content.as_any().downcast_ref::<VisionContent>() {
-                    match &mut current_action {
-                        CookingAction::WaitForVision(executable) => {
-                            let mut exe = executable.clone();
-                            exe.feed(Box::new(vision_content.clone()))?;
-                            let result = exe.execute();
-                            return result
+            }
+            Some(content) => {
+                if let Some(revision) = &self.last_revision {
+                    current_action.feed(content, Some(revision.clone_box()))?;
+                } else {
+                    current_action.feed(content, None)?;
+                }
+                let result = current_action.execute();
+                match result {
+                    Ok(r) => {
+                        match r.code {
+                            SmartSpeakerTaskResultCode::Wait(_) => {
+                                self.internal_move_next()?;
+                                return Ok(r)
+                            }
+                            SmartSpeakerTaskResultCode::ForceNext => {
+                                return self.try_next(None)
+                            }
+                            SmartSpeakerTaskResultCode::RepeatPrevious => {
+                                return Ok(
+                                    SmartSpeakerTaskResult::with_tts(
+                                        SmartSpeakerTaskResultCode::Wait(
+                                            current_action.get_pending_type()),
+                                        current_action.expose_tts_script()?,
+                                    )
+                                )
+                            }
+                            SmartSpeakerTaskResultCode::Exit => {
+                                return self.exit()
+                            }
+                            SmartSpeakerTaskResultCode::Cancelled => {
+                                return self.cancel()
+                            }
                         }
-                        _ => {}
+                    }
+                    Err(_) => {
+                        return self.failed(None)
                     }
                 }
             }
         }
-        Ok(SmartSpeakerTaskResult::new(
-            SmartSpeakerTaskResultCode::Wait(
-                self.step[*&self.current_step].waiting_for.clone()))
-        )
-        // match content {
-        //     None => {
-        //         Ok(SmartSpeakerTaskResult::new(
-        //             SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone()))
-        //         )
-        //     }
-        //     Some(c) => {
-        //         let _ = match c.as_any().downcast_ref::<IntentContent>() {
-        //             None => {}
-        //             Some(intent) => {
-        //                 match intent.intent {
-        //                     IntentAction::Cancel => {
-        //                         self.exit();
-        //                         return Ok(SmartSpeakerTaskResult::with_tts(
-        //                             SmartSpeakerTaskResultCode::Exit,
-        //                             "cooking task exit".to_string(),
-        //                         ))
-        //                     }
-        //                     _ => {
-        //                     }
-        //                 }
-        //             }
-        //         };
-        //         let step = self.step.get_mut(self.current_step);
-        //         return match step {
-        //             None => {
-        //                 Ok(SmartSpeakerTaskResult::with_tts(
-        //                     SmartSpeakerTaskResultCode::Exit,
-        //                     "cooking task exit".to_string(),
-        //                 ))
-        //             }
-        //             Some(step) => {
-        //                 match &mut step.action {
-        //                     CookingAction::None => {
-        //                         Ok(SmartSpeakerTaskResult::new(
-        //                             SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
-        //                     }
-        //                     CookingAction::Explain(explain) => {
-        //                         Ok(explain.execute()?)
-        //                     }
-        //                     CookingAction::WaitForConfirm => {
-        //                         match c.as_any().downcast_ref::<IntentContent>() {
-        //                             None => {
-        //                                 Ok(SmartSpeakerTaskResult::new(
-        //                                     SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
-        //                             }
-        //                             Some(intent) => {
-        //                                 match intent.intent {
-        //                                     IntentAction::Cancel => {
-        //                                         self.exit();
-        //                                         Ok(SmartSpeakerTaskResult::with_tts(
-        //                                             SmartSpeakerTaskResultCode::Exit,
-        //                                             "cooking task exit".to_string(),
-        //                                         ))
-        //                                     }
-        //                                     IntentAction::Confirm => {
-        //                                         match self.internal_move_next() {
-        //                                             Ok(result) => {
-        //                                                 if result {
-        //                                                     Ok(SmartSpeakerTaskResult::new(
-        //                                                         SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
-        //                                                 } else {
-        //                                                     self.exit();
-        //                                                     Ok(SmartSpeakerTaskResult::with_tts(
-        //                                                         SmartSpeakerTaskResultCode::Exit,
-        //                                                         "cooking task exit".to_string(),
-        //                                                     ))
-        //                                                 }
-        //                                             }
-        //                                             Err(_) => {
-        //                                                 Err(anyhow!("failed to move next"))
-        //                                             }
-        //                                         }
-        //                                     }
-        //                                     _ => {
-        //                                         Ok(SmartSpeakerTaskResult::new(SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
-        //                                     }
-        //                                 }
-        //                             }
-        //                         }
-        //                     }
-        //                     CookingAction::WaitForVision(ref mut vision) => {
-        //                         match c.as_any().downcast_ref::<VisionContent>() {
-        //                             None => {
-        //                                 Ok(SmartSpeakerTaskResult::new(
-        //                                     SmartSpeakerTaskResultCode::Wait(PendingType::Vision(vec![])))
-        //                                 )
-        //                             }
-        //                             Some(content) => {
-        //                                 vision.feed(Box::new(content.clone()));
-        //                                 Ok(vision.execute()?)
-        //                             }
-        //                         }
-        //                     }
-        //                 }
-        //             }
-        //         };
-        //     }
-        // }
     }
 
     fn failed(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {
-        Ok(SmartSpeakerTaskResult::new(
-            SmartSpeakerTaskResultCode::Wait(self.waiting_content.clone())))
+        let mut current_action = self.step[*&self.current_step].clone();
+        match current_action.get_pending_type() {
+            PendingType::Speak => {
+                Ok(SmartSpeakerTaskResult::with_tts(
+                    SmartSpeakerTaskResultCode::Wait(
+                        current_action.get_pending_type()),
+                    MachineSpeechBoilerplate::IntentFailed.to_i18n(),
+                ))
+            }
+            PendingType::Vision(_) => {
+                Ok(SmartSpeakerTaskResult::with_tts(
+                    SmartSpeakerTaskResultCode::Wait(
+                        current_action.get_pending_type()),
+                    MachineSpeechBoilerplate::VisionFailed.to_i18n(),
+                ))
+            }
+        }
     }
 
     fn internal_move_next(&mut self) -> Result<bool> {
         if self.current_step < self.step.len() {
             self.current_step += 1;
-            self.waiting_content = self.step.get(self.current_step).unwrap().waiting_for.clone();
             Ok(true)
         } else {
             Ok(false)
@@ -260,54 +199,3 @@ impl Task for CookingTask {
         ))
     }
 }
-
-// pub(crate) struct Recipe {
-//     name: String,
-//     current_step: usize,
-//     steps: Vec<Step>,
-// }
-//
-// impl Recipe {
-//     pub(crate) fn new(name: String) -> Self {
-//         Recipe {
-//             name: name.clone(),
-//             current_step: 0,
-//             steps: Recipe::load_steps(name.clone()).unwrap(),
-//         }
-//     }
-//
-//     pub(crate) fn load_steps(name: String) -> Result<Vec<Step>> {
-//         todo!()
-//     }
-//
-//     pub(crate) fn current_step(&self) -> &Step {
-//         self.steps.get(self.current_step).unwrap()
-//     }
-//
-//     pub(crate) fn next_step(&mut self) -> Result<()> {
-//         self.current_step += 1;
-//         Ok(())
-//     }
-// }
-//
-// pub(crate) struct Step {
-//     name: String,
-// }
-//
-// impl Step {
-//     pub(crate) fn new() -> Self {
-//         Step {
-//             name: "".to_string(),
-//         }
-//     }
-// }
-//
-// pub(crate) trait Action {
-//     fn execute(&self) -> Result<SmartSpeakerActionResultCodes>;
-// }
-//
-// pub(crate) enum SmartSpeakerActionResultCodes {
-//     Success,
-//     Failure,
-//     Cancelled,
-// }

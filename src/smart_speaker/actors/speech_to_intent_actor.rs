@@ -74,19 +74,27 @@ impl SpeechToIntentActor {
                             dbg!("inference is none");
                         }
                         Some(i) => {
-                            content.intent = IntentAction::from_str(&i.intent.unwrap()).unwrap();
-                            for (key, value) in i.slots {
-                                match key.as_str() {
-                                    "menu_name" => {
-                                        content.entities.push(Box::new(IntentCookingMenu::from_str(&value).unwrap()));
+                            let intent = &i.intent.unwrap();
+                            match IntentAction::from_str(intent) {
+                                Ok(action) => {
+                                    content.intent = action;
+                                    for (key, value) in i.slots {
+                                        match key.as_str() {
+                                            "menu_name" => {
+                                                content.entities.push(Box::new(IntentCookingMenu::from_str(&value).unwrap()));
+                                            }
+                                            &_ => {}
+                                        }
                                     }
-                                    &_ => {}
+                                    self.intent_finalized(ProcessResult::Success, content);
+                                }
+                                Err(_) => {
+                                    write_log_message(&self.sender, SmartSpeakerActors::SpeechToIntentActor, SmartSpeakerLogMessageType::Error(format!("failed to parse intent: {}", intent)));
+                                    self.intent_finalized(ProcessResult::Failure, content);
                                 }
                             }
-
                         }
                     }
-                    self.intent_finalized(ProcessResult::Success, content);
                 } else {
                     self.intent_finalized(ProcessResult::Failure, content);
                 }
