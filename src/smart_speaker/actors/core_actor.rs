@@ -13,7 +13,7 @@ use crate::smart_speaker::actors::machine_speech_actor::MachineSpeechActor;
 use crate::smart_speaker::actors::vision_actor::VisionActor;
 use crate::smart_speaker::actors::voice_activity_detect_actor::VoiceActivityDetectActor;
 use crate::smart_speaker::actors::wake_word_actor::WakeWordActor;
-use crate::smart_speaker::models::core_model::{PendingType, SmartSpeakerState};
+use crate::smart_speaker::models::core_model::{WaitingInteraction, SmartSpeakerState};
 use crate::smart_speaker::models::debug_model::DebugData;
 use crate::smart_speaker::models::gaze_model::Gaze;
 use crate::smart_speaker::models::mic_model::{AudioListener, SpeechToIntent, VoiceActivityDetector, WakeWordDetector};
@@ -311,9 +311,9 @@ impl CoreActorMessageHandler {
                                     }
                                 }
                             }
-                            SmartSpeakerState::Pending(pending_type) => {
+                            SmartSpeakerState::WaitingForInteraction(pending_type) => {
                                 match pending_type {
-                                    PendingType::Speak => {
+                                    WaitingInteraction::Speak => {
                                         if senders.get(&SmartSpeakerActors::VoiceActivityDetectActor).is_none() {
                                             return CoreActorState::NewActorRequested {
                                                 actor: SmartSpeakerActors::VoiceActivityDetectActor,
@@ -321,7 +321,7 @@ impl CoreActorMessageHandler {
                                             }
                                         }
                                     }
-                                    PendingType::Vision(action) => {
+                                    WaitingInteraction::Vision(action) => {
                                         if let Some(sender) = senders.get(&SmartSpeakerActors::VisionActor) {
                                             sender.send(message).expect("TODO: panic message");
                                         }

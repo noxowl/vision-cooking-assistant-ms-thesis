@@ -5,7 +5,7 @@ use anyhow::{anyhow, Result};
 use bounded_vec_deque::BoundedVecDeque;
 use opencv::{core::Mat, core::Vector, types::VectorOfVectorOfPoint2f};
 use crate::smart_speaker::controllers::vision_controller;
-use crate::smart_speaker::models::core_model::{PendingType, SmartSpeakerState};
+use crate::smart_speaker::models::core_model::{WaitingInteraction, SmartSpeakerState};
 use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction, VisionObject, VisionSlot};
 use crate::smart_speaker::models::message_model::*;
 use crate::utils::message_util::*;
@@ -77,9 +77,9 @@ impl VisionActor {
             },
             SmartSpeakerMessage::RequestStateUpdate(StateUpdateMessage { send_from: _, send_to: _, state }) => {
                 match state {
-                    SmartSpeakerState::Pending(p) => {
+                    SmartSpeakerState::WaitingForInteraction(p) => {
                         match p {
-                            PendingType::Vision(actions) => {
+                            WaitingInteraction::Vision(actions) => {
                                 let mut result: Vec<VisionContent> = Vec::new();
                                 for action in actions {
                                     match action {

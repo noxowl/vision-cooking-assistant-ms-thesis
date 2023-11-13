@@ -1,7 +1,7 @@
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
-use crate::smart_speaker::models::core_model::{PendingType, SmartSpeakerState};
+use crate::smart_speaker::models::core_model::{WaitingInteraction, SmartSpeakerState};
 use crate::smart_speaker::models::intent_model::IntentAction;
 use crate::smart_speaker::models::speak_model::MachineSpeechBoilerplate;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, Task, cooking_task::CookingTask, vision_viewing_task::VisionViewingTask, SmartSpeakerTaskResultCode};
@@ -147,20 +147,19 @@ impl ContextActor {
 
     fn handle_task_result(&mut self, result: SmartSpeakerTaskResult) {
         match result.code {
+            SmartSpeakerTaskResultCode::TaskSuccess(waitingInteraction) => {
+                self.set_next_state(SmartSpeakerState::WaitingForInteraction(waitingInteraction));
+            }
+            SmartSpeakerTaskResultCode::Cancelled => {
+                self.current_task = None;
+                // self.request_text_to_speech_boilerplate(MachineSpeechBoilerplate::Aborted as usize);
+                self.set_next_state(SmartSpeakerState::Idle)
+            }
             SmartSpeakerTaskResultCode::Exit => {
                 self.current_task = None;
                 self.set_next_state(SmartSpeakerState::Idle)
             }
-            SmartSpeakerTaskResultCode::Wait(pending) => {
-                self.set_next_state(SmartSpeakerState::Pending(pending));
-            }
-            SmartSpeakerTaskResultCode::Cancelled => {
-                self.current_task = None;
-                self.request_text_to_speech_boilerplate(MachineSpeechBoilerplate::Aborted as usize);
-                self.set_next_state(SmartSpeakerState::Idle)
-            }
-            SmartSpeakerTaskResultCode::RepeatPrevious => {}
-            SmartSpeakerTaskResultCode::ForceNext => {}
+            _ => {}
         }
         match result.tts {
             None => {
@@ -188,9 +187,9 @@ impl ContextActor {
 
     fn request_state_update(&self, state: SmartSpeakerState) {
         match &state {
-            SmartSpeakerState::Pending(p) => {
+            SmartSpeakerState::WaitingForInteraction(p) => {
                 match p {
-                    PendingType::Speak => {
+                    WaitingInteraction::Speak => {
                         state_update_message(
                             &self.sender,
                             SmartSpeakerActors::ContextActor,
@@ -198,7 +197,7 @@ impl ContextActor {
                             state,
                         )
                     }
-                    PendingType::Vision(_) => {
+                    WaitingInteraction::Vision(_) => {
                         state_update_message(
                             &self.sender,
                             SmartSpeakerActors::ContextActor,

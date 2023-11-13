@@ -1,6 +1,7 @@
 use std::fmt::Debug;
 use anyhow::Result;
-use crate::smart_speaker::models::core_model::PendingType;
+use crate::smart_speaker::models::core_model::WaitingInteraction;
+use crate::smart_speaker::models::intent_model::IntentAction;
 use crate::smart_speaker::models::message_model::*;
 use crate::smart_speaker::models::revision_model::Revision;
 
@@ -45,8 +46,10 @@ impl SmartSpeakerTaskResult {
 pub(crate) enum SmartSpeakerTaskResultCode {
     Exit,
     RepeatPrevious,
-    Wait(PendingType),
-    ForceNext,
+    StepSuccess,
+    StepFailed,
+    TaskSuccess(WaitingInteraction),
+    TaskFailed(WaitingInteraction),
     Cancelled,
 }
 
@@ -56,6 +59,7 @@ pub(crate) trait Task: Send {
     fn failed(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult>;
     fn internal_move_next(&mut self) -> Result<bool>;
     fn internal_rollback(&mut self) -> Result<bool>;
+
     fn exit(&self) -> Result<SmartSpeakerTaskResult>;
     fn cancel(&self) -> Result<SmartSpeakerTaskResult>;
 }

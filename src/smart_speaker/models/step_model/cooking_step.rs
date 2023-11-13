@@ -1,8 +1,8 @@
 use std::fmt::{Debug};
 use anyhow::{anyhow, Result};
-use crate::smart_speaker::models::core_model::PendingType;
+use crate::smart_speaker::models::core_model::WaitingInteraction;
 use crate::smart_speaker::models::intent_model::IntentCookingMenu;
-use crate::smart_speaker::models::step_model::generic_step::{ActionExecutable, ActionType};
+use crate::smart_speaker::models::step_model::generic_step::{ActionExecutable, ActionTriggerType};
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode};
 use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction, VisionObject};
 use crate::smart_speaker::models::message_model::*;
@@ -16,6 +16,7 @@ pub(crate) struct ExplainRecipeAction {
     pub(crate) tts_script: SmartSpeakerI18nText,
     pub(crate) current_content: Option<IntentContent>,
     pub(crate) current_revision: Option<CookingRevision>,
+    cancelled: bool,
 }
 
 impl ExplainRecipeAction {
@@ -25,22 +26,27 @@ impl ExplainRecipeAction {
             tts_script: text,
             current_content: None,
             current_revision: None,
+            cancelled: false,
         }
     }
 }
 
 impl ActionExecutable for ExplainRecipeAction {
     fn execute(&self) -> Result<SmartSpeakerTaskResult> {
+        if self.has_cancelled() {
+            return Ok(SmartSpeakerTaskResult::new(
+                SmartSpeakerTaskResultCode::Cancelled));
+        }
         match &self.current_content {
             Some(intent) => {
                 Ok(SmartSpeakerTaskResult::with_tts(
-                    SmartSpeakerTaskResultCode::Wait(PendingType::Speak),
+                    SmartSpeakerTaskResultCode::StepSuccess,
                     self.tts_script.clone(),
                 ))
             },
             _ => {
                 Ok(SmartSpeakerTaskResult::with_tts(
-                    SmartSpeakerTaskResultCode::Wait(PendingType::Speak),
+                    SmartSpeakerTaskResultCode::StepFailed,
                     self.tts_script.clone(),
                 ))
             }
@@ -48,6 +54,7 @@ impl ActionExecutable for ExplainRecipeAction {
     }
 
     fn feed(&mut self, content: Box<dyn Content>, revision: Option<Box<dyn Revision>>) -> Result<()> {
+        self.check_cancelled(&content)?;
         if let Some(content) = content.as_any().downcast_ref::<IntentContent>() {
             self.current_content = Some(content.clone());
         }
@@ -70,8 +77,17 @@ impl ActionExecutable for ExplainRecipeAction {
         self
     }
 
-    fn get_action_type(&self) -> ActionType {
+    fn get_action_trigger_type(&self) -> ActionTriggerType {
         todo!()
+    }
+
+    fn get_cancelled(&self) -> bool {
+        self.cancelled
+    }
+
+    fn set_cancelled(&mut self) -> Result<()> {
+        self.cancelled = true;
+        Ok(())
     }
 
     fn expose_tts_script(&self) -> Result<SmartSpeakerI18nText> {
@@ -89,6 +105,7 @@ pub(crate) struct VisionBasedIngredientMeasureAction {
     pub(crate) vision_action: VisionAction,
     pub(crate) current_content: Option<VisionContent>,
     pub(crate) current_revision: Option<CookingRevision>,
+    cancelled: bool,
 }
 
 impl VisionBasedIngredientMeasureAction {
@@ -98,13 +115,14 @@ impl VisionBasedIngredientMeasureAction {
             vision_action,
             current_content: None,
             current_revision: None,
+            cancelled: false,
         }
     }
 
     pub(crate) fn handle_vision_contents(&self, contents: &Vec<VisionObject>) -> Result<SmartSpeakerTaskResult> {
         // write logic here
         Ok(SmartSpeakerTaskResult::with_tts(
-            SmartSpeakerTaskResultCode::ForceNext,
+            SmartSpeakerTaskResultCode::StepSuccess,
             self.tts_script.clone(),
         ))
     }
@@ -112,10 +130,14 @@ impl VisionBasedIngredientMeasureAction {
 
 impl ActionExecutable for VisionBasedIngredientMeasureAction {
     fn execute(&self) -> Result<SmartSpeakerTaskResult> {
+        if self.has_cancelled() {
+            return Ok(SmartSpeakerTaskResult::new(
+                SmartSpeakerTaskResultCode::Cancelled));
+        }
         return match &self.current_content {
             None => {
                 Ok(SmartSpeakerTaskResult::with_tts(
-                    SmartSpeakerTaskResultCode::Wait(PendingType::Vision(vec![self.vision_action])),
+                    SmartSpeakerTaskResultCode::StepFailed,
                     self.tts_script.clone(),
                 ))
             }
@@ -123,7 +145,7 @@ impl ActionExecutable for VisionBasedIngredientMeasureAction {
                 match &content.action {
                     VisionAction::None => {
                         Ok(SmartSpeakerTaskResult::with_tts(
-                            SmartSpeakerTaskResultCode::Wait(PendingType::Vision(vec![self.vision_action])),
+                            SmartSpeakerTaskResultCode::StepSuccess,
                             self.tts_script.clone(),
                         ))
                     }
@@ -137,6 +159,7 @@ impl ActionExecutable for VisionBasedIngredientMeasureAction {
     }
 
     fn feed(&mut self, content: Box<dyn Content>, revision: Option<Box<dyn Revision>>) -> Result<()> {
+        self.check_cancelled(&content)?;
         if let Some(content) = content.as_any().downcast_ref::<VisionContent>() {
             self.current_content = Some(content.clone());
         }
@@ -159,8 +182,17 @@ impl ActionExecutable for VisionBasedIngredientMeasureAction {
         self
     }
 
-    fn get_action_type(&self) -> ActionType {
-        ActionType::Vision(vec![self.vision_action.clone()])
+    fn get_action_trigger_type(&self) -> ActionTriggerType {
+        ActionTriggerType::Vision(vec![self.vision_action.clone()])
+    }
+
+    fn get_cancelled(&self) -> bool {
+        self.cancelled
+    }
+
+    fn set_cancelled(&mut self) -> Result<()> {
+        self.cancelled = true;
+        Ok(())
     }
 
     fn expose_tts_script(&self) -> Result<SmartSpeakerI18nText> {

@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
-use crate::smart_speaker::models::core_model::PendingType;
+use crate::smart_speaker::models::core_model::WaitingInteraction;
 use crate::smart_speaker::models::intent_model::{IntentAction, IntentCookingMenu};
-use crate::smart_speaker::models::step_model::generic_step::ActionExecutable;
+use crate::smart_speaker::models::step_model::generic_step::{ActionExecutable, ActionTriggerType};
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, Task};
 use crate::smart_speaker::models::message_model::*;
 use crate::smart_speaker::models::revision_model::Revision;
@@ -84,55 +84,77 @@ impl Task for CookingTask {
         let mut current_action = self.step[*&self.current_step].clone();
         match content {
             None => {
-                match current_action.get_pending_type(){
-                    PendingType::Speak => {
-                        return Ok(SmartSpeakerTaskResult::with_tts(
-                            SmartSpeakerTaskResultCode::Wait(
-                                current_action.get_pending_type()),
+                let trigger = current_action.get_action_trigger_type();
+                return match trigger {
+                    ActionTriggerType::None => {
+                        Ok(SmartSpeakerTaskResult::with_tts(
+                            SmartSpeakerTaskResultCode::TaskFailed(trigger.to_waiting_interaction()),
                             MachineSpeechBoilerplate::IntentFailed.to_i18n(),
                         ))
                     }
-                    PendingType::Vision(_) => {
-                        return Ok(SmartSpeakerTaskResult::with_tts(
-                            SmartSpeakerTaskResultCode::Wait(
-                                current_action.get_pending_type()),
+                    ActionTriggerType::Confirm => {
+                        Ok(SmartSpeakerTaskResult::with_tts(
+                            SmartSpeakerTaskResultCode::TaskFailed(trigger.to_waiting_interaction()),
+                            MachineSpeechBoilerplate::IntentFailed.to_i18n(),
+                        ))
+                    }
+                    ActionTriggerType::Vision(_) => {
+                        Ok(SmartSpeakerTaskResult::with_tts(
+                            SmartSpeakerTaskResultCode::TaskFailed(trigger.to_waiting_interaction()),
                             MachineSpeechBoilerplate::VisionFailed.to_i18n(),
                         ))
                     }
                 }
             }
             Some(content) => {
+                let next_action = self.step[*&self.current_step + 1].clone();
                 if let Some(revision) = &self.last_revision {
-                    current_action.feed(content, Some(revision.clone_box()))?;
+                    let _ = current_action.feed(content, Some(revision.clone_box()));
                 } else {
-                    current_action.feed(content, None)?;
+                    let _ = current_action.feed(content, None);
                 }
                 let result = current_action.execute();
                 match result {
-                    Ok(r) => {
+                    Ok(mut r) => {
                         match r.code {
-                            SmartSpeakerTaskResultCode::Wait(_) => {
-                                self.internal_move_next()?;
-                                return Ok(r)
-                            }
-                            SmartSpeakerTaskResultCode::ForceNext => {
-                                return self.try_next(None)
-                            }
-                            SmartSpeakerTaskResultCode::RepeatPrevious => {
-                                return Ok(
-                                    SmartSpeakerTaskResult::with_tts(
-                                        SmartSpeakerTaskResultCode::Wait(
-                                            current_action.get_pending_type()),
-                                        current_action.expose_tts_script()?,
-                                    )
-                                )
-                            }
-                            SmartSpeakerTaskResultCode::Exit => {
+                            SmartSpeakerTaskResultCode::StepSuccess => {
+                                if let Ok(move_next_success) = self.internal_move_next() {
+                                    if move_next_success {
+                                        r.code = SmartSpeakerTaskResultCode::TaskSuccess(next_action.get_action_trigger_type().to_waiting_interaction());
+                                        return Ok(r)
+                                    }
+                                }
                                 return self.exit()
+                            }
+                            SmartSpeakerTaskResultCode::StepFailed => {
+                                return Ok(r)
                             }
                             SmartSpeakerTaskResultCode::Cancelled => {
                                 return self.cancel()
                             }
+                            SmartSpeakerTaskResultCode::Exit => {
+                                return self.exit()
+                            }
+                            _ => {
+                                Err(anyhow!("task execution failed"))
+                            }
+                            // SmartSpeakerTaskResultCode::Wait(_) => {
+                            //     self.internal_move_next()?;
+                            //     return Ok(r)
+                            // }
+                            // SmartSpeakerTaskResultCode::ForceNext => {
+                            //     return self.try_next(None)
+                            // }
+                            // SmartSpeakerTaskResultCode::RepeatPrevious => {
+                            //     return Ok(
+                            //         SmartSpeakerTaskResult::with_tts(
+                            //             SmartSpeakerTaskResultCode::Wait(
+                            //                 current_action.get_pending_type()),
+                            //             current_action.expose_tts_script()?,
+                            //         )
+                            //     )
+                            // }
+
                         }
                     }
                     Err(_) => {
@@ -145,19 +167,19 @@ impl Task for CookingTask {
 
     fn failed(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {
         let mut current_action = self.step[*&self.current_step].clone();
-        match current_action.get_pending_type() {
-            PendingType::Speak => {
+        match current_action.get_action_trigger_type() {
+            ActionTriggerType::Vision(_) => {
                 Ok(SmartSpeakerTaskResult::with_tts(
-                    SmartSpeakerTaskResultCode::Wait(
-                        current_action.get_pending_type()),
-                    MachineSpeechBoilerplate::IntentFailed.to_i18n(),
+                    SmartSpeakerTaskResultCode::TaskFailed(
+                        current_action.get_action_trigger_type().to_waiting_interaction()),
+                    MachineSpeechBoilerplate::VisionFailed.to_i18n(),
                 ))
             }
-            PendingType::Vision(_) => {
+            _ => {
                 Ok(SmartSpeakerTaskResult::with_tts(
-                    SmartSpeakerTaskResultCode::Wait(
-                        current_action.get_pending_type()),
-                    MachineSpeechBoilerplate::VisionFailed.to_i18n(),
+                    SmartSpeakerTaskResultCode::TaskFailed(
+                        current_action.get_action_trigger_type().to_waiting_interaction()),
+                    MachineSpeechBoilerplate::IntentFailed.to_i18n(),
                 ))
             }
         }

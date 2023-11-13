@@ -1,6 +1,6 @@
 use anyhow::Result;
-use crate::smart_speaker::models::core_model::PendingType;
-use crate::smart_speaker::models::step_model::generic_step::{ActionExecutable, CountVisionObjectAction};
+use crate::smart_speaker::models::core_model::WaitingInteraction;
+use crate::smart_speaker::models::step_model::generic_step::{ActionExecutable, ActionTriggerType, CountVisionObjectAction};
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, Task};
 use crate::smart_speaker::models::message_model::*;
 use crate::smart_speaker::models::speak_model::MachineSpeechBoilerplate;
@@ -24,8 +24,8 @@ impl VisionViewingTask {
 impl Task for VisionViewingTask {
     fn init(&mut self) -> Result<SmartSpeakerTaskResult> {
         Ok(SmartSpeakerTaskResult::with_tts(
-            SmartSpeakerTaskResultCode::Wait(
-                self.step[*&self.current_step].get_pending_type()),
+            SmartSpeakerTaskResultCode::TaskSuccess(
+                self.step[*&self.current_step + 1].get_action_trigger_type().to_waiting_interaction()),
             SmartSpeakerI18nText::new()
                 .en("Checking...")
                 .ja("確認しています。")
@@ -38,19 +38,19 @@ impl Task for VisionViewingTask {
         let mut current_action = self.step[*&self.current_step].clone();
         match content {
             None => {
-                match current_action.get_pending_type(){
-                    PendingType::Speak => {
+                match current_action.get_action_trigger_type(){
+                    ActionTriggerType::Vision(_) => {
                         return Ok(SmartSpeakerTaskResult::with_tts(
-                            SmartSpeakerTaskResultCode::Wait(
-                                current_action.get_pending_type()),
-                            MachineSpeechBoilerplate::IntentFailed.to_i18n(),
+                            SmartSpeakerTaskResultCode::TaskFailed(
+                                current_action.get_action_trigger_type().to_waiting_interaction()),
+                            MachineSpeechBoilerplate::VisionFailed.to_i18n(),
                         ))
                     }
-                    PendingType::Vision(_) => {
+                    _ => {
                         return Ok(SmartSpeakerTaskResult::with_tts(
-                            SmartSpeakerTaskResultCode::Wait(
-                                current_action.get_pending_type()),
-                            MachineSpeechBoilerplate::VisionFailed.to_i18n(),
+                            SmartSpeakerTaskResultCode::TaskFailed(
+                                current_action.get_action_trigger_type().to_waiting_interaction()),
+                            MachineSpeechBoilerplate::IntentFailed.to_i18n(),
                         ))
                     }
                 }

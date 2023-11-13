@@ -44,7 +44,7 @@ impl DebugData {
                     SmartSpeakerState::Attention => {
                         debug_controller::write_text_to_mat(&mut display_frame, "Attention to user", 10, 40);
                     }
-                    SmartSpeakerState::Pending(pending_type) => {
+                    SmartSpeakerState::WaitingForInteraction(pending_type) => {
                         debug_controller::write_text_to_mat(&mut display_frame, &format!("pending for {}", pending_type), 10, 40);
                     }
                 }

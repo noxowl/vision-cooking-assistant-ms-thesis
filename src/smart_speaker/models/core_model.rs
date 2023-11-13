@@ -5,7 +5,7 @@ use crate::smart_speaker::models::vision_model::VisionAction;
 pub(crate) enum SmartSpeakerState {
     Idle,
     Attention,
-    Pending(PendingType),
+    WaitingForInteraction(WaitingInteraction),
 }
 
 impl Display for SmartSpeakerState {
@@ -13,22 +13,22 @@ impl Display for SmartSpeakerState {
         match self {
             SmartSpeakerState::Idle => write!(f, "Idle"),
             SmartSpeakerState::Attention => write!(f, "Attention"),
-            SmartSpeakerState::Pending(pending_type) => write!(f, "Pending({})", &pending_type),
+            SmartSpeakerState::WaitingForInteraction(waiting) => write!(f, "Pending({})", &waiting),
         }
     }
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub(crate) enum PendingType {
+pub(crate) enum WaitingInteraction {
     Speak,
     Vision(Vec<VisionAction>),
 }
 
-impl Display for PendingType {
+impl Display for WaitingInteraction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
-            PendingType::Speak => write!(f, "Speak"),
-            PendingType::Vision(actions) => write!(f, "Vision({:?})", &actions),
+            WaitingInteraction::Speak => write!(f, "Speak"),
+            WaitingInteraction::Vision(actions) => write!(f, "Vision({:?})", &actions),
         }
     }
 }

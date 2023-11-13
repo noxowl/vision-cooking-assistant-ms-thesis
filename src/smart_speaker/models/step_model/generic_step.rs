@@ -1,16 +1,27 @@
 use std::fmt::{self, Debug, Formatter};
 use anyhow::{anyhow, Result};
-use crate::smart_speaker::models::core_model::PendingType;
+use crate::smart_speaker::models::core_model::WaitingInteraction;
+use crate::smart_speaker::models::intent_model::IntentAction;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode};
 use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction};
 use crate::smart_speaker::models::message_model::*;
 use crate::smart_speaker::models::revision_model::Revision;
 
 #[derive(Debug, Clone)]
-pub(crate) enum ActionType {
+pub(crate) enum ActionTriggerType {
     None,
     Confirm,
     Vision(Vec<VisionAction>),
+}
+
+impl ActionTriggerType {
+    pub(crate) fn to_waiting_interaction(&self) -> WaitingInteraction {
+        match self {
+            ActionTriggerType::None => WaitingInteraction::Speak,
+            ActionTriggerType::Confirm => WaitingInteraction::Speak,
+            ActionTriggerType::Vision(actions) => WaitingInteraction::Vision(actions.clone()),
+        }
+    }
 }
 
 pub(crate) trait ActionExecutable: Send {
@@ -18,14 +29,36 @@ pub(crate) trait ActionExecutable: Send {
     fn feed(&mut self, content: Box<dyn Content>, revision: Option<Box<dyn Revision>>) -> Result<()>;
     fn clone_box(&self) -> Box<dyn ActionExecutable>;
     fn as_any(&self) -> &dyn std::any::Any;
-    fn get_action_type(&self) -> ActionType;
-    fn get_pending_type(&self) -> PendingType {
-        match self.get_action_type() {
-            ActionType::None => PendingType::Speak,
-            ActionType::Confirm => PendingType::Speak,
-            ActionType::Vision(actions) => PendingType::Vision(actions.clone()),
-        }
+    fn get_action_trigger_type(&self) -> ActionTriggerType;
+    // fn get_trigger_type(&self) -> WaitingInteraction {
+    //     match self.get_action_trigger_type() {
+    //         ActionTriggerType::None => WaitingInteraction::Speak,
+    //         ActionTriggerType::Confirm => WaitingInteraction::Speak,
+    //         ActionTriggerType::Vision(actions) => WaitingInteraction::Vision(actions.clone()),
+    //     }
+    // }
+
+    fn has_cancelled(&self) -> bool {
+        self.get_cancelled()
     }
+
+    fn check_cancelled(&mut self, content: &Box<dyn Content>) -> Result<()> {
+        if let Some(content) = content.as_any().downcast_ref::<IntentContent>() {
+            match content.intent {
+                IntentAction::Cancel => {
+                    self.set_cancelled();
+                }
+                _ => {
+                }
+            }
+        } else {
+        }
+        Ok(())
+    }
+
+    fn get_cancelled(&self) -> bool;
+    fn set_cancelled(&mut self) -> Result<()>;
+
     fn expose_tts_script(&self) -> Result<SmartSpeakerI18nText>;
     fn try_expose_vision_actions(&self) -> Result<Vec<VisionAction>>;
 }
@@ -53,6 +86,7 @@ pub(crate) struct GenericAction {
     pub(crate) tts_script: SmartSpeakerI18nText,
     pub(crate) current_contents: Option<IntentContent>,
     pub(crate) current_revisions: Option<Box<dyn Revision>>,
+    cancelled: bool,
 }
 
 impl GenericAction {
@@ -61,12 +95,17 @@ impl GenericAction {
             tts_script: text,
             current_contents: None,
             current_revisions: None,
+            cancelled: false,
         }
     }
 }
 
 impl ActionExecutable for GenericAction {
     fn execute(&self) -> Result<SmartSpeakerTaskResult> {
+        if self.has_cancelled() {
+            return Ok(SmartSpeakerTaskResult::new(
+                SmartSpeakerTaskResultCode::Cancelled));
+        }
         Ok(SmartSpeakerTaskResult::with_tts(
             SmartSpeakerTaskResultCode::Exit,
             self.tts_script.clone(),
@@ -74,6 +113,7 @@ impl ActionExecutable for GenericAction {
     }
 
     fn feed(&mut self, content: Box<dyn Content>, revision: Option<Box<dyn Revision>>) -> Result<()> {
+        self.check_cancelled(&content)?;
         match content.as_any().downcast_ref::<IntentContent>() {
             None => {}
             Some(intent) => {
@@ -91,8 +131,17 @@ impl ActionExecutable for GenericAction {
         self
     }
 
-    fn get_action_type(&self) -> ActionType {
-        ActionType::None
+    fn get_action_trigger_type(&self) -> ActionTriggerType {
+        ActionTriggerType::None
+    }
+
+    fn get_cancelled(&self) -> bool {
+        self.cancelled
+    }
+
+    fn set_cancelled(&mut self) -> Result<()> {
+        self.cancelled = true;
+        Ok(())
     }
 
     fn expose_tts_script(&self) -> Result<SmartSpeakerI18nText> {
@@ -108,6 +157,7 @@ impl ActionExecutable for GenericAction {
 pub(crate) struct CountVisionObjectAction {
     pub(crate) vision_action: VisionAction,
     pub(crate) current_content: Option<VisionContent>,
+    cancelled: bool,
 }
 
 impl CountVisionObjectAction {
@@ -115,6 +165,7 @@ impl CountVisionObjectAction {
         CountVisionObjectAction {
             vision_action: VisionAction::ObjectDetectionWithAruco(DetectableObject::Carrot),
             current_content: None,
+            cancelled: false,
         }
     }
 }
@@ -164,8 +215,17 @@ impl ActionExecutable for CountVisionObjectAction {
         self
     }
 
-    fn get_action_type(&self) -> ActionType {
-        ActionType::Vision(vec![self.vision_action.clone()])
+    fn get_action_trigger_type(&self) -> ActionTriggerType {
+        ActionTriggerType::Vision(vec![self.vision_action.clone()])
+    }
+
+    fn get_cancelled(&self) -> bool {
+        self.cancelled
+    }
+
+    fn set_cancelled(&mut self) -> Result<()> {
+        self.cancelled = true;
+        Ok(())
     }
 
     fn expose_tts_script(&self) -> Result<SmartSpeakerI18nText> {
