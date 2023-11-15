@@ -150,6 +150,9 @@ impl ContextActor {
             SmartSpeakerTaskResultCode::TaskSuccess(waitingInteraction) => {
                 self.set_next_state(SmartSpeakerState::WaitingForInteraction(waitingInteraction));
             }
+            SmartSpeakerTaskResultCode::TaskFailed(waitingInteraction) => {
+                self.set_next_state(SmartSpeakerState::WaitingForInteraction(waitingInteraction));
+            }
             SmartSpeakerTaskResultCode::Cancelled => {
                 self.current_task = None;
                 // self.request_text_to_speech_boilerplate(MachineSpeechBoilerplate::Aborted as usize);
@@ -159,7 +162,9 @@ impl ContextActor {
                 self.current_task = None;
                 self.set_next_state(SmartSpeakerState::Idle)
             }
-            _ => {}
+            _ => {
+                write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Error(format!("{:?} sink!!", result)));
+            }
         }
         match result.tts {
             None => {
@@ -185,7 +190,7 @@ impl ContextActor {
         }
     }
 
-    fn request_state_update(&self, state: SmartSpeakerState) {
+    fn request_state_update(&mut self, state: SmartSpeakerState) {
         match &state {
             SmartSpeakerState::WaitingForInteraction(p) => {
                 match p {
@@ -204,6 +209,15 @@ impl ContextActor {
                             SmartSpeakerActors::VisionActor,
                             state,
                         )
+                    }
+                    WaitingInteraction::None => {
+                        match &mut self.current_task {
+                            None => {}
+                            Some(task) => {
+                                let result = task.exit().unwrap();
+                                self.handle_task_result(result);
+                            }
+                        }
                     }
                 }
             }

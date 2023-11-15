@@ -78,7 +78,7 @@ impl ActionExecutable for ExplainRecipeAction {
     }
 
     fn get_action_trigger_type(&self) -> ActionTriggerType {
-        todo!()
+        ActionTriggerType::Confirm
     }
 
     fn get_cancelled(&self) -> bool {
@@ -240,10 +240,20 @@ impl CookingStepBuilder {
                 Box::new(ExplainRecipeAction::new(
                     vec![],
                     SmartSpeakerI18nText::new()
-                        .en("Let's start measuring the size of the ingredients. Please put the carrot on the measuring board. When you are ready, please let me know with an answer such as 'ok'.")
+                        .en("Start measuring the size of the ingredients. Please put the carrot on the measuring board. When you are ready, please let me know with an answer such as 'ok'.")
                         .ja("食材の大きさを測定し始めます。人参を測定用のまな板の上に置いてください。準備ができたら「オッケー」などの答えで教えてください。")
                         .zh("让我们开始测量食材的大小。请把胡萝卜放在量板上。准备好了就告诉我，比如说“好的”。")
                         .ko("요리 재료의 크기 측정을 시작합니다. 당근을 측정용 도마 위에 올려주세요. 준비가 되면 '오케이'와 같은 대답으로 알려주세요.")
+                ))
+            );
+            steps.push(
+                Box::new(ExplainRecipeAction::new(
+                    vec![],
+                    SmartSpeakerI18nText::new()
+                        .en("I will start measuring. Please do not move and wait.")
+                        .ja("測定を始めます。動かずにお待ちください。")
+                        .zh("我将开始测量。请不要动，等一下。")
+                        .ko("측정중입니다. 움직이지 말고 기다려 주세요.")
                 ))
             );
             steps.push(
@@ -253,10 +263,60 @@ impl CookingStepBuilder {
                         .en("")
                         .ja("")
                         .zh("")
-                        .ko("측정중입니다. 움직이지 말고 기다려 주세요.")
+                        .ko("확인했습니다.")
                 ))
             );
         }
+        steps.push(
+            Box::new(ExplainRecipeAction::new(
+                vec![],
+                SmartSpeakerI18nText::new()
+                    .ko("계속해서 당근을 먹기 좋은 크기로 썰어주세요.")
+                    .en("Please continue to cut the carrots into bite-sized pieces.")
+                    .ja("人参を食べやすい大きさに切り続けてください。")
+                    .zh("请继续把胡萝卜切成一口大小的块。")
+            )));
+        if self.vision {
+            steps.push(
+                Box::new(ExplainRecipeAction::new(
+                    vec![],
+                    SmartSpeakerI18nText::new()
+                        .en("Start measuring the size of the ingredients. Place a cut piece on the measuring chopping board. Let us know when it's ready with a response like 'okay'")
+                        .ja("食材の大きさを測定し始めます。切り分けた一つを測定用のまな板の上に置いてください。準備ができたら「オッケー」などの答えで教えてください。")
+                        .zh("让我们开始测量食材的大小。把切好的一块放在量板上。准备好了就告诉我，比如说“好的”。")
+                        .ko("요리 재료의 크기 측정을 시작합니다. 잘라낸 한 조각을 측정용 도마 위에 올려주세요. 준비가 되면 '오케이'와 같은 대답으로 알려주세요.")
+                ))
+            );
+            steps.push(
+                Box::new(ExplainRecipeAction::new(
+                    vec![],
+                    SmartSpeakerI18nText::new()
+                        .en("I will start measuring. Please do not move and wait.")
+                        .ja("測定を始めます。動かずにお待ちください。")
+                        .zh("我将开始测量。请不要动，等一下。")
+                        .ko("측정중입니다. 움직이지 말고 기다려 주세요.")
+                ))
+            );
+            steps.push(
+                Box::new(VisionBasedIngredientMeasureAction::new(
+                    VisionAction::ObjectDetectionWithAruco(DetectableObject::Carrot),
+                    SmartSpeakerI18nText::new()
+                        .en("")
+                        .ja("")
+                        .zh("")
+                        .ko("확인했습니다.")
+                ))
+            );
+        }
+        steps.push(
+            Box::new(ExplainRecipeAction::new(
+                vec![],
+                SmartSpeakerI18nText::new() // replace to template!!
+                    .ko("손질한 당근을 끓는 물에 약 5분간 삶아주세요.")
+                    .en("Boil the carrots in boiling water for about 5 minutes.")
+                    .ja("人参を沸いた水に約5分間茹でます。")
+                    .zh("把胡萝卜放在沸水里煮约5分钟。")
+            )));
 
         steps
     }

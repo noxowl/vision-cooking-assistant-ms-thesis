@@ -34,6 +34,10 @@ impl Task for VisionViewingTask {
         )
     }
 
+    fn next_index(&self) -> Option<usize> {
+        todo!()
+    }
+
     fn try_next(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {
         let mut current_action = self.step[*&self.current_step].clone();
         match content {
@@ -61,6 +65,10 @@ impl Task for VisionViewingTask {
                 return result
             }
         }
+    }
+
+    fn handle_result(&mut self, result: SmartSpeakerTaskResult) -> Result<SmartSpeakerTaskResult> {
+        todo!()
     }
 
     fn failed(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {

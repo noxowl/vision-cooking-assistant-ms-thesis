@@ -20,6 +20,7 @@ impl Display for SmartSpeakerState {
 
 #[derive(Debug, Clone, PartialEq)]
 pub(crate) enum WaitingInteraction {
+    None,
     Speak,
     Vision(Vec<VisionAction>),
 }
@@ -27,6 +28,7 @@ pub(crate) enum WaitingInteraction {
 impl Display for WaitingInteraction {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         match self {
+            WaitingInteraction::None => write!(f, "None"),
             WaitingInteraction::Speak => write!(f, "Speak"),
             WaitingInteraction::Vision(actions) => write!(f, "Vision({:?})", &actions),
         }

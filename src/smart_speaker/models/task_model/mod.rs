@@ -55,7 +55,9 @@ pub(crate) enum SmartSpeakerTaskResultCode {
 
 pub(crate) trait Task: Send {
     fn init(&mut self) -> Result<SmartSpeakerTaskResult>;
+    fn next_index(&self) -> Option<usize>;
     fn try_next(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult>;
+    fn handle_result(&mut self, result: SmartSpeakerTaskResult) -> Result<SmartSpeakerTaskResult>;
     fn failed(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult>;
     fn internal_move_next(&mut self) -> Result<bool>;
     fn internal_rollback(&mut self) -> Result<bool>;

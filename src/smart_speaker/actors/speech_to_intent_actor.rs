@@ -72,6 +72,8 @@ impl SpeechToIntentActor {
                     match inference {
                         None => {
                             dbg!("inference is none");
+                            write_log_message(&self.sender, SmartSpeakerActors::SpeechToIntentActor, SmartSpeakerLogMessageType::Error(format!("failed to parse intent: None")));
+                            self.intent_finalized(ProcessResult::Failure, content);
                         }
                         Some(i) => {
                             let intent = &i.intent.unwrap();

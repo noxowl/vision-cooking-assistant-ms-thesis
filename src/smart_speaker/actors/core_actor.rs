@@ -326,6 +326,11 @@ impl CoreActorMessageHandler {
                                             sender.send(message).expect("TODO: panic message");
                                         }
                                     }
+                                    WaitingInteraction::None => {
+                                        if let Some(sender) = senders.get(&SmartSpeakerActors::ContextActor) {
+                                            sender.send(message).expect("TODO: panic message");
+                                        }
+                                    }
                                 }
                             }
                             _ => {}

@@ -69,10 +69,6 @@ impl CookingTask {
             }
         }
     }
-
-    fn update(&mut self) -> Result<()> {
-        Ok(())
-    }
 }
 
 impl Task for CookingTask {
@@ -80,8 +76,16 @@ impl Task for CookingTask {
         self.try_next(Some(Box::new(IntentContent::new(IntentAction::Next, vec![]))))
     }
 
+    fn next_index(&self) -> Option<usize> {
+        if self.current_step < self.step.len() - 1 {
+            Some(self.current_step + 1)
+        } else {
+            None
+        }
+    }
+
     fn try_next(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {
-        let mut current_action = self.step[*&self.current_step].clone();
+        let mut current_action = self.step[self.current_step].clone();
         match content {
             None => {
                 let trigger = current_action.get_action_trigger_type();
@@ -107,7 +111,6 @@ impl Task for CookingTask {
                 }
             }
             Some(content) => {
-                let next_action = self.step[*&self.current_step + 1].clone();
                 if let Some(revision) = &self.last_revision {
                     let _ = current_action.feed(content, Some(revision.clone_box()));
                 } else {
@@ -115,58 +118,71 @@ impl Task for CookingTask {
                 }
                 let result = current_action.execute();
                 match result {
-                    Ok(mut r) => {
-                        match r.code {
-                            SmartSpeakerTaskResultCode::StepSuccess => {
-                                if let Ok(move_next_success) = self.internal_move_next() {
-                                    if move_next_success {
-                                        r.code = SmartSpeakerTaskResultCode::TaskSuccess(next_action.get_action_trigger_type().to_waiting_interaction());
-                                        return Ok(r)
-                                    }
-                                }
-                                return self.exit()
-                            }
-                            SmartSpeakerTaskResultCode::StepFailed => {
-                                return Ok(r)
-                            }
-                            SmartSpeakerTaskResultCode::Cancelled => {
-                                return self.cancel()
-                            }
-                            SmartSpeakerTaskResultCode::Exit => {
-                                return self.exit()
-                            }
-                            _ => {
-                                Err(anyhow!("task execution failed"))
-                            }
-                            // SmartSpeakerTaskResultCode::Wait(_) => {
-                            //     self.internal_move_next()?;
-                            //     return Ok(r)
-                            // }
-                            // SmartSpeakerTaskResultCode::ForceNext => {
-                            //     return self.try_next(None)
-                            // }
-                            // SmartSpeakerTaskResultCode::RepeatPrevious => {
-                            //     return Ok(
-                            //         SmartSpeakerTaskResult::with_tts(
-                            //             SmartSpeakerTaskResultCode::Wait(
-                            //                 current_action.get_pending_type()),
-                            //             current_action.expose_tts_script()?,
-                            //         )
-                            //     )
-                            // }
-
-                        }
+                    Ok(r) => {
+                        return self.handle_result(r)
                     }
                     Err(_) => {
                         return self.failed(None)
                     }
                 }
+
+                // let next = self.next_index();
+                // match next {
+                //     None => {
+                //         if self.current_step == self.step.len() {
+                //             if let Some(revision) = &self.last_revision {
+                //                 let _ = current_action.feed(content, Some(revision.clone_box()));
+                //             } else {
+                //                 let _ = current_action.feed(content, None);
+                //             }
+                //             let result = current_action.execute();
+                //         } else {
+                //             return self.exit()
+                //         }
+                //     }
+                //     Some(i) => {
+                //
+                //     }
+                // }
+            }
+        }
+    }
+
+    fn handle_result(&mut self, result: SmartSpeakerTaskResult) -> Result<SmartSpeakerTaskResult> {
+        match result.code {
+            SmartSpeakerTaskResultCode::StepSuccess => {
+                if let Ok(move_next_success) = self.internal_move_next() {
+                    if move_next_success {
+                        // replace with next action
+                        let next_action = self.step[self.current_step].clone();
+                        let mut updated_result = result.clone();
+                        updated_result.code = SmartSpeakerTaskResultCode::TaskSuccess(next_action.get_action_trigger_type().to_waiting_interaction());
+                        return Ok(updated_result)
+                    } else {
+                        let mut updated_result = result.clone();
+                        updated_result.code = SmartSpeakerTaskResultCode::TaskSuccess(WaitingInteraction::None);
+                        return Ok(updated_result)
+                    }
+                }
+                return self.exit()
+            }
+            SmartSpeakerTaskResultCode::StepFailed => {
+                return Ok(result)
+            }
+            SmartSpeakerTaskResultCode::Cancelled => {
+                return self.cancel()
+            }
+            SmartSpeakerTaskResultCode::Exit => {
+                return self.exit()
+            }
+            _ => {
+                Err(anyhow!("task execution failed"))
             }
         }
     }
 
     fn failed(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {
-        let mut current_action = self.step[*&self.current_step].clone();
+        let mut current_action = self.step[self.current_step].clone();
         match current_action.get_action_trigger_type() {
             ActionTriggerType::Vision(_) => {
                 Ok(SmartSpeakerTaskResult::with_tts(
@@ -186,7 +202,7 @@ impl Task for CookingTask {
     }
 
     fn internal_move_next(&mut self) -> Result<bool> {
-        if self.current_step < self.step.len() {
+        if self.current_step < self.step.len() - 1 {
             self.current_step += 1;
             Ok(true)
         } else {
