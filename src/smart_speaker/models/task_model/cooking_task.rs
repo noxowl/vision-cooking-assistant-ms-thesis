@@ -160,7 +160,7 @@ impl Task for CookingTask {
                         return Ok(updated_result)
                     } else {
                         let mut updated_result = result.clone();
-                        updated_result.code = SmartSpeakerTaskResultCode::TaskSuccess(WaitingInteraction::None);
+                        updated_result.code = SmartSpeakerTaskResultCode::TaskSuccess(WaitingInteraction::Exit);
                         return Ok(updated_result)
                     }
                 }

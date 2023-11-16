@@ -326,7 +326,7 @@ impl CoreActorMessageHandler {
                                             sender.send(message).expect("TODO: panic message");
                                         }
                                     }
-                                    WaitingInteraction::None => {
+                                    WaitingInteraction::Exit => {
                                         if let Some(sender) = senders.get(&SmartSpeakerActors::ContextActor) {
                                             sender.send(message).expect("TODO: panic message");
                                         }

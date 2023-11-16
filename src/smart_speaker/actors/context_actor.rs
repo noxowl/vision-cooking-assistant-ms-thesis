@@ -210,7 +210,16 @@ impl ContextActor {
                             state,
                         )
                     }
-                    WaitingInteraction::None => {
+                    WaitingInteraction::Skip => {
+                        match &mut self.current_task {
+                            None => {}
+                            Some(task) => {
+                                let result = task.try_next(None).unwrap();
+                                self.handle_task_result(result);
+                            }
+                        }
+                    }
+                    WaitingInteraction::Exit => {
                         match &mut self.current_task {
                             None => {}
                             Some(task) => {
