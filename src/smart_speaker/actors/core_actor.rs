@@ -331,6 +331,7 @@ impl CoreActorMessageHandler {
                                             sender.send(message).expect("TODO: panic message");
                                         }
                                     }
+                                    _ => {}
                                 }
                             }
                             _ => {}

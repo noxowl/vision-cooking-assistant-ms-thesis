@@ -136,15 +136,18 @@ impl VisionActor {
                         match vision_controller::detect_target_objects(frame, &target) {
                             Ok(objects) => {
                                 write_log_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerLogMessageType::Debug(format!("Detected objects: {}", &objects.len())));
+                                let shapes = vision_controller::detect_object_shape(&objects).unwrap();
                                 match vision_controller::measure_object_size_by_aruco(aruco, &objects) {
                                     Ok(measure_result) => {
                                         let content_result = VisionContent::new(
                                             VisionAction::ObjectDetectionWithAruco(target.clone()),
-                                            measure_result.iter()
-                                                .map(|object| {
+                                            measure_result.iter().enumerate()
+                                                .map(|(i, object)| {
                                                     Box::new(VisionObject::new(
                                                         target.clone(),
-                                                        object.clone())) as Box<dyn VisionSlot>
+                                                        object.clone(),
+                                                        shapes.get(i).unwrap().clone(),
+                                                    )) as Box<dyn VisionSlot>
                                                 }).collect()
                                         );
                                         Ok(content_result)

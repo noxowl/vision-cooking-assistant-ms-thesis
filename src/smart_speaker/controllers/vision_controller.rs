@@ -1,9 +1,9 @@
 use anyhow::{anyhow, Result};
 use opencv::{objdetect, imgproc};
 use opencv::prelude::*;
-use opencv::core::{Vector, Size, Point2f};
+use opencv::core::{Vector, Size, Point2f, Point};
 use opencv::types::{VectorOfi32, VectorOfVectorOfPoint2f};
-use crate::smart_speaker::models::vision_model::{DetectableObject, VisionObjectSize};
+use crate::smart_speaker::models::vision_model::{DetectableObject, VisionObjectShape, VisionObjectSize};
 use crate::utils::vision_util;
 
 
@@ -55,9 +55,44 @@ pub(crate) fn detect_target_objects(frame: &Mat, target: &DetectableObject) -> R
     }
     let object_contours = vision_util::get_object_contours(&object_mask).unwrap();
     for contour in object_contours {
-        detected_objects.push(vision_util::get_approx_poly_dp(&contour));
+        detected_objects.push(vision_util::get_approx_poly_dp(&contour, false));
     }
     Ok(detected_objects)
+}
+
+pub(crate) fn detect_object_shape(object_contours: &VectorOfVectorOfPoint2f) -> Result<Vec<VisionObjectShape>>{
+    let mut shapes = vec![];
+    for contour in object_contours {
+        let approx = vision_util::get_approx_poly_dp(&contour.iter().map(|c| Point::new(c.x as i32, c.y as i32)).collect(), true);
+        if approx.len() == 3 {
+            shapes.push(VisionObjectShape::Triangle);
+        } else if approx.len() == 4 {
+            let rect = vision_util::get_min_rect2f(&contour);
+            let mut points = [Point2f::default(); 4];
+            rect.points(&mut points).unwrap();
+            let width = vision_util::distance(&points[1].x, &points[1].y, &points[2].x, &points[2].y);
+            let height = vision_util::distance(&points[0].x, &points[0].y, &points[1].x, &points[1].y);
+            let ratio = width / height;
+            if ratio >= 0.95 && ratio <= 1.05 {
+                shapes.push(VisionObjectShape::Square);
+            } else {
+                shapes.push(VisionObjectShape::Rectangle);
+            }
+        } else {
+            let rect = vision_util::get_min_rect2f(&contour);
+            let mut points = [Point2f::default(); 4];
+            rect.points(&mut points).unwrap();
+            let width = vision_util::distance(&points[1].x, &points[1].y, &points[2].x, &points[2].y);
+            let height = vision_util::distance(&points[0].x, &points[0].y, &points[1].x, &points[1].y);
+            let ratio = width / height;
+            if ratio >= 0.95 && ratio <= 1.05 {
+                shapes.push(VisionObjectShape::Circle);
+            } else {
+                shapes.push(VisionObjectShape::SemiCircle);
+            }
+        }
+    }
+    Ok(shapes)
 }
 
 /// measure object size by aruco marker

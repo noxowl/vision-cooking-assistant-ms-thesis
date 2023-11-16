@@ -112,12 +112,13 @@ pub(crate) fn get_min_rect2f(contour: &VectorOfPoint2f) -> RotatedRect {
     imgproc::min_area_rect(&contour).expect("TODO: panic message")
 }
 
-pub(crate) fn get_approx_poly_dp(contour: &VectorOfPoint) -> VectorOfPoint2f {
+pub(crate) fn get_approx_poly_dp(contour: &VectorOfPoint, compress: bool) -> VectorOfPoint2f {
     let mut approx = VectorOfPoint2f::new();
+    let epsilon = if compress { 0.04 * imgproc::arc_length(&contour, true).unwrap() } else { 0.02 };
     imgproc::approx_poly_dp(
         &contour,
         &mut approx,
-        0.02, // * imgproc::arc_length(&contour, true).unwrap(),
+        epsilon,
         true,
     ).unwrap();
     approx

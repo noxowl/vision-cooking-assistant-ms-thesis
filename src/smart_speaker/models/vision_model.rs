@@ -187,13 +187,15 @@ impl Clone for Box<dyn VisionSlot> {
 pub(crate) struct VisionObject {
     pub(crate) object_type: DetectableObject,
     pub(crate) size: VisionObjectSize,
+    pub(crate) shape: VisionObjectShape,
 }
 
 impl VisionObject {
-    pub(crate) fn new(object_type: DetectableObject, size: VisionObjectSize) -> Self {
+    pub(crate) fn new(object_type: DetectableObject, size: VisionObjectSize, shape: VisionObjectShape) -> Self {
         Self {
             object_type,
-            size
+            size,
+            shape,
         }
     }
 }
@@ -221,6 +223,57 @@ impl VisionObjectSize {
             perimeter,
             width,
             height,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum VisionObjectShape {
+    Triangle,
+    Square,
+    Rectangle,
+    Circle,
+    SemiCircle,
+}
+
+impl VisionObjectShape {
+    pub(crate) fn to_i18n(&self) -> SmartSpeakerI18nText {
+        match self {
+            VisionObjectShape::Triangle => {
+                SmartSpeakerI18nText::new()
+                    .en("triangle")
+                    .ja("三角形")
+                    .zh("三角形")
+                    .ko("삼각형")
+            }
+            VisionObjectShape::Square => {
+                SmartSpeakerI18nText::new()
+                    .en("square")
+                    .ja("正方形")
+                    .zh("正方形")
+                    .ko("정사각형")
+            }
+            VisionObjectShape::Rectangle => {
+                SmartSpeakerI18nText::new()
+                    .en("rectangle")
+                    .ja("長方形")
+                    .zh("长方形")
+                    .ko("직사각형")
+            }
+            VisionObjectShape::Circle => {
+                SmartSpeakerI18nText::new()
+                    .en("circle")
+                    .ja("円形")
+                    .zh("圆形")
+                    .ko("원형")
+            }
+            VisionObjectShape::SemiCircle => {
+                SmartSpeakerI18nText::new()
+                    .en("semi-circle")
+                    .ja("半円形")
+                    .zh("半圆形")
+                    .ko("반원형")
+            }
         }
     }
 }

@@ -1,21 +1,23 @@
 use std::fmt::{Debug};
 use anyhow::{anyhow, Result};
 use handlebars::Handlebars;
+use serde_json::json;
 use crate::smart_speaker::models::intent_model::IntentCookingMenu;
 use crate::smart_speaker::models::step_model::generic_step::{ActionExecutable, ActionTriggerType};
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode};
 use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction, VisionObject};
 use crate::smart_speaker::models::message_model::*;
-use crate::smart_speaker::models::revision_model::cooking_revision::CookingRevision;
+use crate::smart_speaker::models::revision_model::cooking_revision::{CookingRevision, CookingRevisionEntity};
 use crate::smart_speaker::models::revision_model::Revision;
 use crate::smart_speaker::models::task_model::cooking_task::CookingIngredient;
 
+#[derive(Debug, Clone)]
 pub(crate) enum CookingActionDetail {
     None,
     ExplainNonMutableIngredient,
     ExplainMutableIngredient,
     ExplainMutableTime,
-    MeasureWholeIngredient,
+    MeasureWholeIngredient(),
     MeasureCutIngredient,
 }
 
@@ -27,6 +29,7 @@ pub(crate) struct ExplainRecipeAction {
     pub(crate) current_content: Option<IntentContent>,
     pub(crate) current_revision: Option<CookingRevision>,
     cancelled: bool,
+    repeat_requested: bool,
 }
 
 impl ExplainRecipeAction {
@@ -38,6 +41,7 @@ impl ExplainRecipeAction {
             current_content: None,
             current_revision: None,
             cancelled: false,
+            repeat_requested: false,
         }
     }
 }
@@ -48,17 +52,42 @@ impl ActionExecutable for ExplainRecipeAction {
             return Ok(SmartSpeakerTaskResult::new(
                 SmartSpeakerTaskResultCode::Cancelled));
         }
+        if self.has_request_repeat() {
+            return Ok(SmartSpeakerTaskResult::new(
+                SmartSpeakerTaskResultCode::RepeatPrevious));
+        }
+        let mut reg = Handlebars::new();
+        let mut tts_script = self.tts_script.clone();
         match &self.current_content {
             Some(intent) => {
+                match self.detail {
+                    CookingActionDetail::ExplainNonMutableIngredient => {
+                        tts_script.en = reg.render_template(&self.tts_script.en, &json!({
+                            "additional_explain": self.ingredients.iter().map(|i| format!("{} {}", i.unit.to_approx_amount_i18n().en, i.name.to_i18n().en)).collect::<Vec<String>>().join(". ")
+                        })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                        tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
+                            "additional_explain": self.ingredients.iter().map(|i| format!("{}が {}", i.name.to_i18n().ja, i.unit.to_approx_amount_i18n().ja)).collect::<Vec<String>>().join("。")
+                        })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                        tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
+                            "additional_explain": self.ingredients.iter().map(|i| format!("{} {}", i.name.to_i18n().zh, i.unit.to_approx_amount_i18n().zh)).collect::<Vec<String>>().join("。")
+                        })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                        tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
+                            "additional_explain": self.ingredients.iter().map(|i| format!("{}이 {}", i.name.to_i18n().ko, i.unit.to_approx_amount_i18n().ko)).collect::<Vec<String>>().join(". ")
+                        })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                    }
+                    CookingActionDetail::ExplainMutableIngredient => {}
+                    CookingActionDetail::ExplainMutableTime => {}
+                    _ => {}
+                }
                 Ok(SmartSpeakerTaskResult::with_tts(
                     SmartSpeakerTaskResultCode::StepSuccess,
-                    self.tts_script.clone(),
+                    tts_script,
                 ))
             },
             _ => {
                 Ok(SmartSpeakerTaskResult::with_tts(
                     SmartSpeakerTaskResultCode::StepFailed,
-                    self.tts_script.clone(),
+                    tts_script,
                 ))
             }
         }
@@ -66,6 +95,7 @@ impl ActionExecutable for ExplainRecipeAction {
 
     fn feed(&mut self, content: Box<dyn Content>, revision: Option<Box<dyn Revision>>) -> Result<()> {
         self.check_cancelled(&content)?;
+        self.check_request_repeat(&content)?;
         if let Some(content) = content.as_any().downcast_ref::<IntentContent>() {
             self.current_content = Some(content.clone());
         }
@@ -101,6 +131,15 @@ impl ActionExecutable for ExplainRecipeAction {
         Ok(())
     }
 
+    fn get_repeated(&self) -> bool {
+        self.repeat_requested
+    }
+
+    fn set_repeated(&mut self) -> Result<()> {
+        self.repeat_requested = true;
+        Ok(())
+    }
+
     fn expose_tts_script(&self) -> Result<SmartSpeakerI18nText> {
         Ok(self.tts_script.clone())
     }
@@ -118,6 +157,7 @@ pub(crate) struct VisionBasedIngredientMeasureAction {
     pub(crate) current_content: Option<VisionContent>,
     pub(crate) current_revision: Option<CookingRevision>,
     cancelled: bool,
+    repeat_requested: bool,
 }
 
 impl VisionBasedIngredientMeasureAction {
@@ -129,23 +169,24 @@ impl VisionBasedIngredientMeasureAction {
             current_content: None,
             current_revision: None,
             cancelled: false,
+            repeat_requested: false,
         }
     }
 
     pub(crate) fn handle_vision_contents(&self, contents: &Vec<VisionObject>) -> Result<SmartSpeakerTaskResult> {
-        // write logic here
-        match self.detail {
-            CookingActionDetail::MeasureWholeIngredient => {
-
+        let mut revisions: Vec<CookingRevisionEntity> = vec![];
+        for content in contents {
+            match content.object_type {
+                DetectableObject::Carrot => {
+                    // self.detail
+                }
+                DetectableObject::HumanSkin => {}
             }
-            CookingActionDetail::MeasureCutIngredient => {
-
-            }
-            _ => {}
         }
-        Ok(SmartSpeakerTaskResult::with_tts(
+        Ok(SmartSpeakerTaskResult::with_tts_and_revision(
             SmartSpeakerTaskResultCode::StepSuccess,
             self.tts_script.clone(),
+            Box::new(CookingRevision::new(revisions)),
         ))
     }
 }
@@ -155,6 +196,10 @@ impl ActionExecutable for VisionBasedIngredientMeasureAction {
         if self.has_cancelled() {
             return Ok(SmartSpeakerTaskResult::new(
                 SmartSpeakerTaskResultCode::Cancelled));
+        }
+        if self.has_request_repeat() {
+            return Ok(SmartSpeakerTaskResult::new(
+                SmartSpeakerTaskResultCode::RepeatPrevious));
         }
         return match &self.current_content {
             None => {
@@ -182,6 +227,7 @@ impl ActionExecutable for VisionBasedIngredientMeasureAction {
 
     fn feed(&mut self, content: Box<dyn Content>, revision: Option<Box<dyn Revision>>) -> Result<()> {
         self.check_cancelled(&content)?;
+        self.check_request_repeat(&content)?;
         if let Some(content) = content.as_any().downcast_ref::<VisionContent>() {
             self.current_content = Some(content.clone());
         }
@@ -214,6 +260,15 @@ impl ActionExecutable for VisionBasedIngredientMeasureAction {
 
     fn set_cancelled(&mut self) -> Result<()> {
         self.cancelled = true;
+        Ok(())
+    }
+
+    fn get_repeated(&self) -> bool {
+        self.repeat_requested
+    }
+
+    fn set_repeated(&mut self) -> Result<()> {
+        self.repeat_requested = true;
         Ok(())
     }
 
@@ -254,10 +309,10 @@ impl CookingStepBuilder {
                 menu.to_ingredient(),
                 CookingActionDetail::ExplainNonMutableIngredient,
                 SmartSpeakerI18nText::new()
-                    .ko("요리 재료 설명을 시작합니다. {{additional_explain}}")
-                    .en("Let's start explaining ingredients. {{additional_explain}}")
-                    .ja("食材の説明を始めます。{{additional_explain}}")
-                    .zh("让我们开始解释食材。{{additional_explain}}")
+                    .ko("요리 재료 설명을 시작합니다. {{additional_explain}} 가 필요합니다. 다음으로 넘어갈 준비가 되었으면 알려주세요. 다시 한 번 들으시려면 '다시 알려 줘' 라고 말씀해주세요.")
+                    .en("Let's start explaining ingredients. {{additional_explain}} is required. Let me know when you are ready to proceed. If you want to hear it again, please say 'tell me again'.")
+                    .ja("食材の説明を始めます。{{additional_explain}} が必要です。次に進む準備ができたら教えてください。もう一度聞きたい場合は、「もう一度教えて」と言ってください。")
+                    .zh("让我们开始解释食材。{{additional_explain}} 是必需的。准备好后请告诉我。如果你想再听一遍，请说“再告诉我一遍”。")
             )));
         steps.push(
             Box::new(ExplainRecipeAction::new(
@@ -294,7 +349,7 @@ impl CookingStepBuilder {
             );
             steps.push(
                 Box::new(VisionBasedIngredientMeasureAction::new(
-                    CookingActionDetail::MeasureWholeIngredient,
+                    CookingActionDetail::MeasureWholeIngredient(),
                     VisionAction::ObjectDetectionWithAruco(DetectableObject::Carrot),
                     SmartSpeakerI18nText::new()
                         .ko("확인했습니다.")
@@ -311,8 +366,8 @@ impl CookingStepBuilder {
                 SmartSpeakerI18nText::new()
                     .ko("계속해서 당근을 먹기 좋은 크기로 썰어주세요.")
                     .en("Please continue to cut the carrots into bite-sized pieces.")
-                    .ja("人参を食べやすい大きさに切り続けてください。")
-                    .zh("请继续把胡萝卜切成一口大小的块。")
+                    .ja("続いて、人参を食べやすい大きさに切ってください。")
+                    .zh("请继续把胡萝卜切成一口大小。")
             )));
         if self.vision {
             steps.push(

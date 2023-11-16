@@ -133,7 +133,7 @@ pub(crate) enum IntentAction {
     CookingTask,
     Confirm,
     Next,
-    Previous,
+    Repeat,
 }
 
 impl FromStr for IntentAction {
@@ -156,7 +156,7 @@ impl FromStr for IntentAction {
             "承認" => Ok(IntentAction::Confirm),
             "取り消し" => Ok(IntentAction::Cancel),
             "次" => Ok(IntentAction::Next),
-            "繰り返し" => Ok(IntentAction::Previous),
+            "繰り返し" => Ok(IntentAction::Repeat),
             _ => Err(()),
         }
     }

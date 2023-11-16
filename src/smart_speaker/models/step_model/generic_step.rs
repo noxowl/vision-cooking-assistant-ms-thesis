@@ -59,6 +59,28 @@ pub(crate) trait ActionExecutable: Send {
     fn get_cancelled(&self) -> bool;
     fn set_cancelled(&mut self) -> Result<()>;
 
+    fn has_request_repeat(&self) -> bool {
+        self.get_repeated()
+    }
+
+    fn check_request_repeat(&mut self, content: &Box<dyn Content>) -> Result<()> {
+        if let Some(content) = content.as_any().downcast_ref::<IntentContent>() {
+            match content.intent {
+                IntentAction::Repeat => {
+                    self.set_repeated();
+                }
+                _ => {
+                }
+            }
+        } else {
+        }
+        Ok(())
+    }
+
+    fn get_repeated(&self) -> bool;
+
+    fn set_repeated(&mut self) -> Result<()>;
+
     fn expose_tts_script(&self) -> Result<SmartSpeakerI18nText>;
     fn try_expose_vision_actions(&self) -> Result<Vec<VisionAction>>;
 }
@@ -87,6 +109,7 @@ pub(crate) struct GenericAction {
     pub(crate) current_contents: Option<IntentContent>,
     pub(crate) current_revisions: Option<Box<dyn Revision>>,
     cancelled: bool,
+    repeat_requested: bool,
 }
 
 impl GenericAction {
@@ -96,6 +119,7 @@ impl GenericAction {
             current_contents: None,
             current_revisions: None,
             cancelled: false,
+            repeat_requested: false,
         }
     }
 }
@@ -144,6 +168,15 @@ impl ActionExecutable for GenericAction {
         Ok(())
     }
 
+    fn get_repeated(&self) -> bool {
+        self.repeat_requested
+    }
+
+    fn set_repeated(&mut self) -> Result<()> {
+        self.repeat_requested = true;
+        Ok(())
+    }
+
     fn expose_tts_script(&self) -> Result<SmartSpeakerI18nText> {
         Ok(self.tts_script.clone())
     }
@@ -158,6 +191,7 @@ pub(crate) struct CountVisionObjectAction {
     pub(crate) vision_action: VisionAction,
     pub(crate) current_content: Option<VisionContent>,
     cancelled: bool,
+    repeat_requested: bool,
 }
 
 impl CountVisionObjectAction {
@@ -166,6 +200,7 @@ impl CountVisionObjectAction {
             vision_action: VisionAction::ObjectDetectionWithAruco(DetectableObject::Carrot),
             current_content: None,
             cancelled: false,
+            repeat_requested: false,
         }
     }
 }
@@ -225,6 +260,15 @@ impl ActionExecutable for CountVisionObjectAction {
 
     fn set_cancelled(&mut self) -> Result<()> {
         self.cancelled = true;
+        Ok(())
+    }
+
+    fn get_repeated(&self) -> bool {
+        self.repeat_requested
+    }
+
+    fn set_repeated(&mut self) -> Result<()> {
+        self.repeat_requested = true;
         Ok(())
     }
 

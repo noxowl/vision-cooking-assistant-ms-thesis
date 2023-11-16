@@ -38,6 +38,128 @@ pub(crate) enum CookingIngredientName {
     Onion,
 }
 
+impl CookingIngredientName {
+    pub(crate) fn to_i18n(&self) -> SmartSpeakerI18nText {
+        match self {
+            CookingIngredientName::Salt => {
+                SmartSpeakerI18nText::new()
+                    .en("salt")
+                    .ja("塩")
+                    .zh("盐")
+                    .ko("소금")
+            }
+            CookingIngredientName::Pepper => {
+                SmartSpeakerI18nText::new()
+                    .en("pepper")
+                    .ja("胡椒")
+                    .zh("胡椒")
+                    .ko("후추")
+            }
+            CookingIngredientName::Sugar => {
+                SmartSpeakerI18nText::new()
+                    .en("sugar")
+                    .ja("砂糖")
+                    .zh("糖")
+                    .ko("설탕")
+            }
+            CookingIngredientName::SoySauce => {
+                SmartSpeakerI18nText::new()
+                    .en("soy sauce")
+                    .ja("醤油")
+                    .zh("酱油")
+                    .ko("간장")
+            }
+            CookingIngredientName::Sesame => {
+                SmartSpeakerI18nText::new()
+                    .en("sesame")
+                    .ja("ごま")
+                    .zh("芝麻")
+                    .ko("참깨")
+            }
+            CookingIngredientName::SesameOil => {
+                SmartSpeakerI18nText::new()
+                    .en("sesame oil")
+                    .ja("ごま油")
+                    .zh("芝麻油")
+                    .ko("참기름")
+            }
+            CookingIngredientName::Miso => {
+                SmartSpeakerI18nText::new()
+                    .en("miso")
+                    .ja("味噌")
+                    .zh("味噌")
+                    .ko("된장")
+            }
+            CookingIngredientName::Sake => {
+                SmartSpeakerI18nText::new()
+                    .en("sake")
+                    .ja("酒")
+                    .zh("酒")
+                    .ko("술")
+            }
+            CookingIngredientName::Mirin => {
+                SmartSpeakerI18nText::new()
+                    .en("mirin")
+                    .ja("みりん")
+                    .zh("味醂")
+                    .ko("미림")
+            }
+            CookingIngredientName::Carrot => {
+                SmartSpeakerI18nText::new()
+                    .en("carrot")
+                    .ja("人参")
+                    .zh("胡萝卜")
+                    .ko("당근")
+            }
+            CookingIngredientName::Onion => {
+                SmartSpeakerI18nText::new()
+                    .en("onion")
+                    .ja("玉ねぎ")
+                    .zh("洋葱")
+                    .ko("양파")
+            }
+        }
+    }
+
+    pub(crate) fn to_template_code(&self) -> String {
+        match self {
+            CookingIngredientName::Salt => {
+                "salt".to_string()
+            }
+            CookingIngredientName::Pepper => {
+                "pepper".to_string()
+            }
+            CookingIngredientName::Sugar => {
+                "sugar".to_string()
+            }
+            CookingIngredientName::SoySauce => {
+                "soy_sauce".to_string()
+            }
+            CookingIngredientName::Sesame => {
+                "sesame".to_string()
+            }
+            CookingIngredientName::SesameOil => {
+                "sesame_oil".to_string()
+            }
+            CookingIngredientName::Miso => {
+                "miso".to_string()
+            }
+            CookingIngredientName::Sake => {
+                "sake".to_string()
+            }
+            CookingIngredientName::Mirin => {
+                "mirin".to_string()
+            }
+            CookingIngredientName::Carrot => {
+                "carrot".to_string()
+            }
+            CookingIngredientName::Onion => {
+                "onion".to_string()
+            }
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub(crate) enum CookingIngredientAmount {
     MilliGram(i32),
@@ -45,11 +167,80 @@ pub(crate) enum CookingIngredientAmount {
     Piece(i32),
 }
 
+impl CookingIngredientAmount {
+    pub(crate) fn to_i18n(&self) -> SmartSpeakerI18nText {
+        match self {
+            CookingIngredientAmount::MilliGram(amount) => {
+                SmartSpeakerI18nText::new()
+                    .en(&format!("{} milligram", amount))
+                    .ja(&format!("{}ミリグラム", amount))
+                    .zh(&format!("{}毫克", amount))
+                    .ko(&format!("{}밀리그램", amount))
+            }
+            CookingIngredientAmount::MilliLiter(amount) => {
+                SmartSpeakerI18nText::new()
+                    .en(&format!("{} milliliter", amount))
+                    .ja(&format!("{}ミリリットル", amount))
+                    .zh(&format!("{}毫升", amount))
+                    .ko(&format!("{}밀리리터", amount))
+            }
+            CookingIngredientAmount::Piece(amount) => {
+                SmartSpeakerI18nText::new()
+                    .en(&format!("{} piece", amount))
+                    .ja(&format!("{}個", amount))
+                    .zh(&format!("{}个", amount))
+                    .ko(&format!("{}개", amount))
+            }
+        }
+    }
+
+    pub(crate) fn to_template_code(&self) -> String {
+        match self {
+            CookingIngredientAmount::MilliGram(_) => {
+                format!("mg")
+            }
+            CookingIngredientAmount::MilliLiter(_) => {
+                format!("ml")
+            }
+            CookingIngredientAmount::Piece(_) => {
+                format!("p")
+            }
+        }
+    }
+
+    pub(crate) fn to_approx_unit_i18n(&self) -> SmartSpeakerI18nText {
+        match self {
+            CookingIngredientAmount::MilliGram(amount) => {
+                SmartSpeakerI18nText::new()
+                    .en(&format!("{} milligram", amount))
+                    .ja(&format!("{}ミリグラム", amount))
+                    .zh(&format!("{}毫克", amount))
+                    .ko(&format!("{}밀리그램", amount))
+            }
+            CookingIngredientAmount::MilliLiter(amount) => {
+                SmartSpeakerI18nText::new()
+                    .en(&format!("{} milliliter", amount))
+                    .ja(&format!("{}ミリリットル", amount))
+                    .zh(&format!("{}毫升", amount))
+                    .ko(&format!("{}밀리리터", amount))
+            }
+            CookingIngredientAmount::Piece(amount) => {
+                SmartSpeakerI18nText::new()
+                    .en(&format!("{} piece", amount))
+                    .ja(&format!("{}個", amount))
+                    .zh(&format!("{}个", amount))
+                    .ko(&format!("{}개", amount))
+            }
+        }
+    }
+}
+
 pub(crate) struct CookingTask {
     pub(crate) menu: IntentCookingMenu,
     pub(crate) step: Vec<Box<dyn ActionExecutable>>,
     pub(crate) current_step: usize,
     pub(crate) last_revision: Option<Box<dyn Revision>>,
+    pub(crate) previous_success_result: Option<SmartSpeakerTaskResult>,
     pub(crate) checkpoint: usize,
 }
 
@@ -64,6 +255,7 @@ impl CookingTask {
                     step: CookingStepBuilder::new(vision).build(menu),
                     current_step: 0,
                     last_revision: None,
+                    previous_success_result: None,
                     checkpoint: 0,
                 })
             }
@@ -125,25 +317,6 @@ impl Task for CookingTask {
                         return self.failed(None)
                     }
                 }
-
-                // let next = self.next_index();
-                // match next {
-                //     None => {
-                //         if self.current_step == self.step.len() {
-                //             if let Some(revision) = &self.last_revision {
-                //                 let _ = current_action.feed(content, Some(revision.clone_box()));
-                //             } else {
-                //                 let _ = current_action.feed(content, None);
-                //             }
-                //             let result = current_action.execute();
-                //         } else {
-                //             return self.exit()
-                //         }
-                //     }
-                //     Some(i) => {
-                //
-                //     }
-                // }
             }
         }
     }
@@ -157,6 +330,7 @@ impl Task for CookingTask {
                         let next_action = self.step[self.current_step].clone();
                         let mut updated_result = result.clone();
                         updated_result.code = SmartSpeakerTaskResultCode::TaskSuccess(next_action.get_action_trigger_type().to_waiting_interaction());
+                        self.previous_success_result = Some(updated_result.clone());
                         return Ok(updated_result)
                     } else {
                         let mut updated_result = result.clone();
@@ -168,6 +342,12 @@ impl Task for CookingTask {
             }
             SmartSpeakerTaskResultCode::StepFailed => {
                 return Ok(result)
+            }
+            SmartSpeakerTaskResultCode::RepeatPrevious => {
+                if let Some(previous) = self.previous_success_result.clone() {
+                    return Ok(previous)
+                }
+                Err(anyhow!("failed to repeat previous action"))
             }
             SmartSpeakerTaskResultCode::Cancelled => {
                 return self.cancel()

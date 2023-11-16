@@ -166,6 +166,10 @@ impl ContextActor {
                 write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Error(format!("{:?} sink!!", result)));
             }
         }
+        // explain why none=handle_next_state and some=handle_tts
+        // handle next state raise listen/vision request
+        // so for listen safe to call handle_next_state after tts
+        // state flow in if tts: request_tts -> tts_finished -> handle_next_state -> request_state_update else request_state_update
         match result.tts {
             None => {
                 self.handle_next_state();
@@ -214,7 +218,7 @@ impl ContextActor {
                         match &mut self.current_task {
                             None => {}
                             Some(task) => {
-                                let result = task.try_next(None).unwrap();
+                                let result = task.try_next(Some(Box::new(IntentContent::new(IntentAction::Next, vec![])))).unwrap();
                                 self.handle_task_result(result);
                             }
                         }

@@ -1,5 +1,6 @@
 use std::ops::Mul;
 use opencv::{prelude::*, highgui, core::Point2f};
+use opencv::core::Point;
 use crate::smart_speaker::controllers::vision_controller;
 use crate::smart_speaker::controllers::debug_controller;
 use crate::smart_speaker::models::core_model::SmartSpeakerState;
@@ -76,6 +77,7 @@ impl DebugData {
                 let masked = vision_util::mask_object(frame, vision_model::DetectableObject::Carrot).unwrap();
                 match vision_controller::detect_target_objects(frame, &vision_model::DetectableObject::Carrot) {
                     Ok(objects) => {
+                        let shapes = vision_controller::detect_object_shape(&objects).unwrap();
                         debug_controller::write_text_to_mat(&mut display_frame, &format!("Contour: {}", &objects.len()), 10, 60);
 
                         match vision_controller::measure_object_size_by_aruco(&aruco_contours, &objects) {
@@ -83,10 +85,12 @@ impl DebugData {
                                 for i in 0..measure_result.len() {
                                     let rect = vision_util::get_min_rect2f(&objects.get(i).unwrap());
                                     let object_size = measure_result.get(i).unwrap();
+                                    let shape_poly = vision_util::get_approx_poly_dp(&objects.get(i).unwrap().iter().map(|c| Point::new(c.x as i32, c.y as i32)).collect(), true);
 
                                     debug_controller::draw_rotated_rect_to_mat(&mut display_frame, &rect);
                                     debug_controller::draw_approx_poly_to_mat(&mut display_frame, &objects.get(i).unwrap());
-                                    debug_controller::write_text_to_mat(&mut display_frame, &format!("Object: {:.1} cm^2 ({:.1}x{:.1}) cm", object_size.perimeter, object_size.width, object_size.height), rect.center.x as i32, rect.center.y as i32 + 20 );
+                                    debug_controller::draw_approx_poly_to_mat(&mut display_frame, &shape_poly);
+                                    debug_controller::write_text_to_mat(&mut display_frame, &format!("Object: {:.1} cm^2 ({:.1}x{:.1}) cm\nShape: {}", object_size.perimeter, object_size.width, object_size.height, &shapes.get(i).unwrap().to_i18n().en), rect.center.x as i32, rect.center.y as i32 + 20 );
                                 }
                             }
                             Err(_) => {
