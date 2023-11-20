@@ -1,3 +1,4 @@
+use std::ops::Div;
 use anyhow::{anyhow, Result};
 use crate::smart_speaker::models::core_model::WaitingInteraction;
 use crate::smart_speaker::models::intent_model::{IntentAction, IntentCookingMenu};
@@ -7,6 +8,69 @@ use crate::smart_speaker::models::message_model::*;
 use crate::smart_speaker::models::revision_model::Revision;
 use crate::smart_speaker::models::speak_model::MachineSpeechBoilerplate;
 use crate::smart_speaker::models::step_model::cooking_step::CookingStepBuilder;
+
+
+#[derive(Debug, Clone, PartialEq)]
+pub(crate) enum SmartSpeakerMaterialProperty {
+    Solid,
+    Liquid,
+    Powder,
+    Gas,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct CookingIngredientTime {
+    pub(crate) name: CookingIngredientName,
+    pub(crate) time: u32,
+}
+
+impl CookingIngredientTime {
+    pub(crate) fn new(name: CookingIngredientName, time: u32) -> Self {
+        CookingIngredientTime {
+            name,
+            time,
+        }
+    }
+}
+
+
+pub(crate) fn amount_to_approx_quarter(lhs: i32, rhs: i32) -> CookingIngredientAmountQuarter {
+    // This function compares the number of LHS and RHS (the base) and returns a number in the range of 4/4.
+    // The CookingIngredientAmountQuarter value is 4/4 = 1 piece.
+    // For example, if the base is 1000, the range is 250, 500, 750, 1000.
+    let base = rhs / 4;
+    if lhs < base {
+        CookingIngredientAmountQuarter::new(1)
+    } else if lhs < base * 2 {
+        CookingIngredientAmountQuarter::new(2)
+    } else if lhs < base * 3 {
+        CookingIngredientAmountQuarter::new(3)
+    } else {
+        CookingIngredientAmountQuarter::new(4)
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct CookingIngredientLinkComponent {
+    pub(crate) main: CookingIngredient,
+    pub(crate) components: Vec<CookingIngredient>,
+}
+
+impl CookingIngredientLinkComponent {
+    pub(crate) fn new(main: CookingIngredient, components: Vec<CookingIngredient>) -> Self {
+        CookingIngredientLinkComponent {
+            main,
+            components,
+        }
+    }
+}
+
+const COOKING_INGREDIENT_AMOUNT_TBSP_TO_ML: i32 = 15;
+const COOKING_INGREDIENT_AMOUNT_TSP_TO_ML: i32 = 5;
+const COOKING_INGREDIENT_AMOUNT_CUP_TO_ML: i32 = 200;
+const COOKING_INGREDIENT_AMOUNT_TBSP_TO_MILLIGRAM: i32 = 15;
+const COOKING_INGREDIENT_AMOUNT_TSP_TO_MILLIGRAM: i32 = 5;
+const COOKING_INGREDIENT_AMOUNT_CUP_TO_MILLIGRAM: i32 = 200;
 
 #[derive(Debug, Clone)]
 pub(crate) struct CookingIngredient {
@@ -21,9 +85,58 @@ impl CookingIngredient {
             unit,
         }
     }
+
+    pub(crate) fn to_approx_unit_i18n(&self) -> SmartSpeakerI18nText {
+        match self.unit {
+            CookingIngredientAmount::MilliGram(amount) => {
+                match self.name.to_material_property() {
+                    SmartSpeakerMaterialProperty::Powder => {
+                        if amount < COOKING_INGREDIENT_AMOUNT_TBSP_TO_ML {
+                            let tsp = amount_to_approx_quarter(amount, COOKING_INGREDIENT_AMOUNT_TSP_TO_MILLIGRAM);
+                            CookingIngredientAmount::Tsp(tsp).to_i18n()
+                        } else {
+                            let tbsp = amount_to_approx_quarter(amount, COOKING_INGREDIENT_AMOUNT_TBSP_TO_MILLIGRAM);
+                            CookingIngredientAmount::Tbsp(tbsp).to_i18n()
+                        }
+                    }
+                    SmartSpeakerMaterialProperty::Solid => {
+                        let criteria = self.name.get_weight_per_one_criteria();
+                        if (criteria.0..criteria.1).contains(&amount) {
+                            CookingIngredientAmount::Piece(CookingIngredientAmountQuarter::new(4)).to_i18n()
+                        } else {
+                            let piece = amount_to_approx_quarter(amount, criteria.0);
+                            CookingIngredientAmount::Piece(piece).to_i18n()
+                        }
+                    }
+                    _ => {
+                        self.unit.to_i18n()
+                    }
+                }
+            }
+            CookingIngredientAmount::MilliLiter(amount) => {
+                match self.name.to_material_property() {
+                    SmartSpeakerMaterialProperty::Liquid => {
+                        if amount < COOKING_INGREDIENT_AMOUNT_TBSP_TO_ML {
+                            let tsp = amount_to_approx_quarter(amount, COOKING_INGREDIENT_AMOUNT_TSP_TO_ML);
+                            CookingIngredientAmount::Tsp(tsp).to_i18n()
+                        } else {
+                            let tbsp = amount_to_approx_quarter(amount, COOKING_INGREDIENT_AMOUNT_TBSP_TO_ML);
+                            CookingIngredientAmount::Tbsp(tbsp).to_i18n()
+                        }
+                    }
+                    _ => {
+                        self.unit.to_i18n()
+                    }
+                }
+            }
+            _ => {
+                self.unit.to_i18n()
+            }
+        }
+    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) enum CookingIngredientName {
     Salt,
     Pepper,
@@ -158,13 +271,136 @@ impl CookingIngredientName {
             }
         }
     }
+
+    pub(crate) fn to_material_property(&self) -> SmartSpeakerMaterialProperty {
+        match self {
+            CookingIngredientName::Salt => {
+                SmartSpeakerMaterialProperty::Powder
+            }
+            CookingIngredientName::Pepper => {
+                SmartSpeakerMaterialProperty::Powder
+            }
+            CookingIngredientName::Sugar => {
+                SmartSpeakerMaterialProperty::Powder
+            }
+            CookingIngredientName::SoySauce => {
+                SmartSpeakerMaterialProperty::Liquid
+            }
+            CookingIngredientName::Sesame => {
+                SmartSpeakerMaterialProperty::Powder
+            }
+            CookingIngredientName::SesameOil => {
+                SmartSpeakerMaterialProperty::Liquid
+            }
+            CookingIngredientName::Miso => {
+                SmartSpeakerMaterialProperty::Liquid
+            }
+            CookingIngredientName::Sake => {
+                SmartSpeakerMaterialProperty::Liquid
+            }
+            CookingIngredientName::Mirin => {
+                SmartSpeakerMaterialProperty::Liquid
+            }
+            CookingIngredientName::Carrot => {
+                SmartSpeakerMaterialProperty::Solid
+            }
+            CookingIngredientName::Onion => {
+                SmartSpeakerMaterialProperty::Solid
+            }
+        }
+    }
+
+    pub(crate) fn get_weight_per_one_criteria(&self) -> (i32, i32) {
+        match self {
+            CookingIngredientName::Carrot => {
+                (1000, 3000)
+            }
+            CookingIngredientName::Onion => {
+                (2000, 3000)
+            }
+            _ => {
+                (0, 0)
+            }
+        }
+    }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
+pub(crate) struct CookingIngredientAmountQuarter {
+    value: i32,
+}
+
+impl CookingIngredientAmountQuarter {
+    pub(crate) fn new(value: i32) -> Self {
+        CookingIngredientAmountQuarter {
+            value,
+        }
+    }
+
+    fn add(self, other: Self) -> Self {
+        CookingIngredientAmountQuarter {
+            value: self.value + other.value,
+        }
+    }
+
+    fn sub(self, other: Self) -> Self {
+        CookingIngredientAmountQuarter {
+            value: self.value - other.value,
+        }
+    }
+
+    pub(crate) fn to_i18n(&self) -> SmartSpeakerI18nText {
+        match self.value {
+            1 => {
+                SmartSpeakerI18nText::new()
+                    .en("a quarter")
+                    .ja("1/4")
+                    .zh("四分之一")
+                    .ko("1/4")
+            }
+            2 => {
+                SmartSpeakerI18nText::new()
+                    .en("half")
+                    .ja("1/2")
+                    .zh("一半")
+                    .ko("반")
+            }
+            3 => {
+                SmartSpeakerI18nText::new()
+                    .en("three quarters")
+                    .ja("3/4")
+                    .zh("四分之三")
+                    .ko("3/4")
+            }
+            _ => {
+                let full = self.value / 4;
+                let rem = self.value % 4;
+                if rem > 0 {
+                    SmartSpeakerI18nText::new()
+                        .en(&format!("{} and {}", full, CookingIngredientAmountQuarter::new(rem).to_i18n().en))
+                        .ja(&format!("{}と{}", full, CookingIngredientAmountQuarter::new(rem).to_i18n().ja))
+                        .zh(&format!("{}和{}", full, CookingIngredientAmountQuarter::new(rem).to_i18n().zh))
+                        .ko(&format!("{}과 {}", full, CookingIngredientAmountQuarter::new(rem).to_i18n().ko))
+                } else {
+                    SmartSpeakerI18nText::new()
+                        .en(&format!("{}", full))
+                        .ja(&format!("{}", full))
+                        .zh(&format!("{}", full))
+                        .ko(&format!("{}", full))
+                }
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub(crate) enum CookingIngredientAmount {
     MilliGram(i32),
     MilliLiter(i32),
-    Piece(i32),
+    Piece(CookingIngredientAmountQuarter),
+    Tbsp(CookingIngredientAmountQuarter),
+    Tsp(CookingIngredientAmountQuarter),
+    Cup(CookingIngredientAmountQuarter),
 }
 
 impl CookingIngredientAmount {
@@ -186,10 +422,31 @@ impl CookingIngredientAmount {
             }
             CookingIngredientAmount::Piece(amount) => {
                 SmartSpeakerI18nText::new()
-                    .en(&format!("{} piece", amount))
-                    .ja(&format!("{}個", amount))
-                    .zh(&format!("{}个", amount))
-                    .ko(&format!("{}개", amount))
+                    .en(&format!("{} piece", amount.to_i18n().en))
+                    .ja(&format!("{}個", amount.to_i18n().ja))
+                    .zh(&format!("{}个", amount.to_i18n().zh))
+                    .ko(&format!("{}개", amount.to_i18n().ko))
+            }
+            CookingIngredientAmount::Tbsp(amount) => {
+                SmartSpeakerI18nText::new()
+                    .en(&format!("{} tablespoon", amount.to_i18n().en))
+                    .ja(&format!("{}大さじ", amount.to_i18n().ja))
+                    .zh(&format!("{}大勺", amount.to_i18n().zh))
+                    .ko(&format!("{}큰술", amount.to_i18n().ko))
+            }
+            CookingIngredientAmount::Tsp(amount) => {
+                SmartSpeakerI18nText::new()
+                    .en(&format!("{} teaspoon", amount.to_i18n().en))
+                    .ja(&format!("{}小さじ", amount.to_i18n().ja))
+                    .zh(&format!("{}小勺", amount.to_i18n().zh))
+                    .ko(&format!("{}작은술", amount.to_i18n().ko))
+            }
+            CookingIngredientAmount::Cup(amount) => {
+                SmartSpeakerI18nText::new()
+                    .en(&format!("{} cup", amount.to_i18n().en))
+                    .ja(&format!("{}カップ", amount.to_i18n().ja))
+                    .zh(&format!("{}杯", amount.to_i18n().zh))
+                    .ko(&format!("{}컵", amount.to_i18n().ko))
             }
         }
     }
@@ -205,35 +462,134 @@ impl CookingIngredientAmount {
             CookingIngredientAmount::Piece(_) => {
                 format!("p")
             }
+            CookingIngredientAmount::Tbsp(_) => {
+                format!("tbsp")
+            }
+            CookingIngredientAmount::Tsp(_) => {
+                format!("tsp")
+            }
+            CookingIngredientAmount::Cup(_) => {
+                format!("cup")
+            }
         }
     }
 
-    pub(crate) fn to_approx_unit_i18n(&self) -> SmartSpeakerI18nText {
+    pub(crate) fn add(&self, rhs: CookingIngredientAmount) -> Result<CookingIngredientAmount> {
+        // add with same unit. if not return error
         match self {
-            CookingIngredientAmount::MilliGram(amount) => {
-                SmartSpeakerI18nText::new()
-                    .en(&format!("{} milligram", amount))
-                    .ja(&format!("{}ミリグラム", amount))
-                    .zh(&format!("{}毫克", amount))
-                    .ko(&format!("{}밀리그램", amount))
+            CookingIngredientAmount::MilliGram(left_amount) => {
+                match rhs {
+                    CookingIngredientAmount::MilliGram(right_amount) => {
+                        Ok(CookingIngredientAmount::MilliGram(left_amount + right_amount))
+                    }
+                    CookingIngredientAmount::MilliLiter(_) => {
+                        Err(anyhow!("failed to add different unit"))
+                    }
+                    CookingIngredientAmount::Piece(_) => {
+                        Err(anyhow!("failed to add different unit"))
+                    }
+                    _ => {
+                        Err(anyhow!("adding approx unit is not supported"))
+                    }
+                }
             }
-            CookingIngredientAmount::MilliLiter(amount) => {
-                SmartSpeakerI18nText::new()
-                    .en(&format!("{} milliliter", amount))
-                    .ja(&format!("{}ミリリットル", amount))
-                    .zh(&format!("{}毫升", amount))
-                    .ko(&format!("{}밀리리터", amount))
+            CookingIngredientAmount::MilliLiter(left_amount) => {
+                match rhs {
+                    CookingIngredientAmount::MilliGram(_) => {
+                        Err(anyhow!("failed to add different unit"))
+                    }
+                    CookingIngredientAmount::MilliLiter(right_amount) => {
+                        Ok(CookingIngredientAmount::MilliLiter(left_amount + right_amount))
+                    }
+                    CookingIngredientAmount::Piece(_) => {
+                        Err(anyhow!("failed to add different unit"))
+                    }
+                    _ => {
+                        Err(anyhow!("adding approx unit is not supported"))
+                    }
+                }
             }
-            CookingIngredientAmount::Piece(amount) => {
-                SmartSpeakerI18nText::new()
-                    .en(&format!("{} piece", amount))
-                    .ja(&format!("{}個", amount))
-                    .zh(&format!("{}个", amount))
-                    .ko(&format!("{}개", amount))
+            CookingIngredientAmount::Piece(left_amount) => {
+                match rhs {
+                    CookingIngredientAmount::MilliGram(_) => {
+                        Err(anyhow!("failed to add different unit"))
+                    }
+                    CookingIngredientAmount::MilliLiter(_) => {
+                        Err(anyhow!("failed to add different unit"))
+                    }
+                    CookingIngredientAmount::Piece(right_amount) => {
+                        let new = left_amount.clone().add(right_amount);
+                        Ok(CookingIngredientAmount::Piece(new))
+                    }
+                    _ => {
+                        Err(anyhow!("adding approx unit is not supported"))
+                    }
+                }
+            }
+            _ => {
+                Err(anyhow!("adding approx unit is not supported"))
+            }
+        }
+    }
+
+    pub(crate) fn sub(&self, rhs: CookingIngredientAmount) -> Result<CookingIngredientAmount> {
+        // reduce with same unit. if not return error
+        match self {
+            CookingIngredientAmount::MilliGram(left_amount) => {
+                match rhs {
+                    CookingIngredientAmount::MilliGram(right_amount) => {
+                        Ok(CookingIngredientAmount::MilliGram(left_amount - right_amount))
+                    }
+                    CookingIngredientAmount::MilliLiter(_) => {
+                        Err(anyhow!("failed to subtract different unit"))
+                    }
+                    CookingIngredientAmount::Piece(_) => {
+                        Err(anyhow!("failed to subtract different unit"))
+                    }
+                    _ => {
+                        Err(anyhow!("subtracting approx unit is not supported"))
+                    }
+                }
+            }
+            CookingIngredientAmount::MilliLiter(left_amount) => {
+                match rhs {
+                    CookingIngredientAmount::MilliGram(_) => {
+                        Err(anyhow!("failed to subtract different unit"))
+                    }
+                    CookingIngredientAmount::MilliLiter(right_amount) => {
+                        Ok(CookingIngredientAmount::MilliLiter(left_amount - right_amount))
+                    }
+                    CookingIngredientAmount::Piece(_) => {
+                        Err(anyhow!("failed to subtract different unit"))
+                    }
+                    _ => {
+                        Err(anyhow!("subtracting approx unit is not supported"))
+                    }
+                }
+            }
+            CookingIngredientAmount::Piece(left_amount) => {
+                match rhs {
+                    CookingIngredientAmount::MilliGram(_) => {
+                        Err(anyhow!("failed to subtract different unit"))
+                    }
+                    CookingIngredientAmount::MilliLiter(_) => {
+                        Err(anyhow!("failed to subtract different unit"))
+                    }
+                    CookingIngredientAmount::Piece(right_amount) => {
+                        Ok(CookingIngredientAmount::Piece(left_amount.clone().sub(right_amount)))
+                    }
+                    _ => {
+                        Err(anyhow!("subtracting approx unit is not supported"))
+                    }
+                }
+            }
+            _ => {
+                Err(anyhow!("subtracting approx unit is not supported"))
             }
         }
     }
 }
+
 
 pub(crate) struct CookingTask {
     pub(crate) menu: IntentCookingMenu,

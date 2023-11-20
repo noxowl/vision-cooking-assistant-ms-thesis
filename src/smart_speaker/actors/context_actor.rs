@@ -1,3 +1,4 @@
+use std::ptr::write;
 use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
@@ -80,7 +81,6 @@ impl ContextActor {
                 self.current_task = Some(Box::new(CookingTask::new(content, self.vision).unwrap()))
             }
             _ => {
-                dbg!(content);
                 self.request_text_to_speech_boilerplate(MachineSpeechBoilerplate::Undefined as usize);
                 self.request_state_update(SmartSpeakerState::Idle);
             }
@@ -156,11 +156,12 @@ impl ContextActor {
             SmartSpeakerTaskResultCode::Cancelled => {
                 self.current_task = None;
                 // self.request_text_to_speech_boilerplate(MachineSpeechBoilerplate::Aborted as usize);
-                self.set_next_state(SmartSpeakerState::Idle)
+                self.set_next_state(SmartSpeakerState::Idle);
             }
             SmartSpeakerTaskResultCode::Exit => {
                 self.current_task = None;
-                self.set_next_state(SmartSpeakerState::Idle)
+                write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Info("exit".to_string()));
+                self.set_next_state(SmartSpeakerState::Idle);
             }
             _ => {
                 write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Error(format!("{:?} sink!!", result)));
@@ -181,20 +182,26 @@ impl ContextActor {
     }
 
     fn set_next_state(&mut self, state: SmartSpeakerState) {
+        write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug(format!("set next state: {:?}", &state).to_string()));
         self.next_state = Some(state);
+        write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug(format!("set next state finished: {:?}", &self.next_state).to_string()));
     }
 
     fn handle_next_state(&mut self) {
+        write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug(format!("handle next state: {:?}", &self.next_state).to_string()));
         match &self.next_state {
             None => {}
             Some(state) => {
-                self.request_state_update(state.clone());
+                write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug(format!("handle next state remove this state: {:?}", &state).to_string()));
+                let current_state = state.clone();
                 self.next_state = None;
+                self.request_state_update(current_state);
             }
         }
     }
 
     fn request_state_update(&mut self, state: SmartSpeakerState) {
+        write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug(format!("request state update: {:?}", state)));
         match &state {
             SmartSpeakerState::WaitingForInteraction(p) => {
                 match p {
@@ -243,7 +250,6 @@ impl ContextActor {
                 )
             }
         }
-
     }
 
     fn request_text_to_speech(&self, text: SmartSpeakerI18nText) {
