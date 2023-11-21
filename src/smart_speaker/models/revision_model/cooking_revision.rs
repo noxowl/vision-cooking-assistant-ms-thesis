@@ -21,11 +21,29 @@ impl Revision for CookingRevision {
     fn as_any(&self) -> &dyn std::any::Any {
         self
     }
+
+    fn print_revision(&self) -> String {
+        format!("{:?}", self)
+    }
 }
 
 #[derive(Debug, Clone)]
-pub(crate) enum CookingRevisionEntity {
+pub(crate) struct CookingRevisionEntity {
+    pub(crate) entity_id: u16,
+    pub(crate) property: CookingRevisionEntityProperty,
+}
+
+impl CookingRevisionEntity {
+    pub(crate) fn new(entity_id: u16, property: CookingRevisionEntityProperty) -> Self {
+        Self {
+            entity_id,
+            property,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub(crate) enum CookingRevisionEntityProperty {
     Add(CookingIngredient),
-    Remove(CookingIngredient),
-    Replace(CookingIngredient),
+    Sub(CookingIngredient),
 }

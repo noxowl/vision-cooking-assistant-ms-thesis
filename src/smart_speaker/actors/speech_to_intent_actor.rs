@@ -29,7 +29,7 @@ impl SpeechToIntentActor {
 
     pub(crate) fn run(&mut self) {
         write_log_message(&self.sender, SmartSpeakerActors::SpeechToIntentActor, SmartSpeakerLogMessageType::Info("SpeechToIntentActor started".to_string()));
-        write_log_message(&self.sender, SmartSpeakerActors::SpeechToIntentActor, SmartSpeakerLogMessageType::Info(self.app.info()));
+        // write_log_message(&self.sender, SmartSpeakerActors::SpeechToIntentActor, SmartSpeakerLogMessageType::Debug(self.app.info()));
         while self.alive {
             match self.receiver.try_recv() {
                 Ok(message) => {

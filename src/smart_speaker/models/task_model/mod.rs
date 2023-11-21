@@ -9,32 +9,43 @@ pub(crate) mod cooking_task;
 pub(crate) mod vision_viewing_task;
 pub(crate) mod vision_cooking_task;
 
+
+#[derive(Debug, PartialEq, Clone)]
+pub(crate) enum SmartSpeakerTaskType {
+    Vision,
+    NonVision
+}
+
 #[derive(Debug, PartialEq, Clone)]
 pub(crate) struct SmartSpeakerTaskResult {
+    pub(crate) task_type: SmartSpeakerTaskType,
     pub(crate) code: SmartSpeakerTaskResultCode,
     pub(crate) tts: Option<SmartSpeakerI18nText>,
     pub(crate) revision: Option<Box<dyn Revision>>
 }
 
 impl SmartSpeakerTaskResult {
-    pub(crate) fn new(code: SmartSpeakerTaskResultCode) -> Self {
+    pub(crate) fn new(task_type: SmartSpeakerTaskType, code: SmartSpeakerTaskResultCode) -> Self {
         SmartSpeakerTaskResult {
+            task_type,
             code,
             tts: None,
             revision: None,
         }
     }
 
-    pub(crate) fn with_tts(code: SmartSpeakerTaskResultCode, tts: SmartSpeakerI18nText) -> Self {
+    pub(crate) fn with_tts(task_type: SmartSpeakerTaskType, code: SmartSpeakerTaskResultCode, tts: SmartSpeakerI18nText) -> Self {
         SmartSpeakerTaskResult {
+            task_type,
             code,
             tts: Some(tts),
             revision: None,
         }
     }
 
-    pub(crate) fn with_tts_and_revision(code: SmartSpeakerTaskResultCode, tts: SmartSpeakerI18nText, revision: Box<dyn Revision>) -> Self {
+    pub(crate) fn with_tts_and_revision(task_type: SmartSpeakerTaskType, code: SmartSpeakerTaskResultCode, tts: SmartSpeakerI18nText, revision: Box<dyn Revision>) -> Self {
         SmartSpeakerTaskResult {
+            task_type,
             code,
             tts: Some(tts),
             revision: Some(revision),

@@ -56,6 +56,7 @@ impl GazeActor {
     }
 
     fn handle_gaze(&mut self, (gaze_x, gaze_y): (f32, f32)) {
+        write_log_message(&self.sender, SmartSpeakerActors::GazeActor, SmartSpeakerLogMessageType::Debug(format!("gaze: ({}, {})", gaze_x, gaze_y)));
         self.gaze_x = gaze_x;
         self.gaze_y = gaze_y;
     }

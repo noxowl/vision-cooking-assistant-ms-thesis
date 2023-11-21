@@ -3,8 +3,9 @@ use anyhow::{anyhow, Result};
 use crate::smart_speaker::models::core_model::WaitingInteraction;
 use crate::smart_speaker::models::intent_model::{IntentAction, IntentCookingMenu};
 use crate::smart_speaker::models::step_model::generic_step::{ActionExecutable, ActionTriggerType};
-use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, Task};
+use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, SmartSpeakerTaskType, Task};
 use crate::smart_speaker::models::message_model::*;
+use crate::smart_speaker::models::revision_model::cooking_revision::{CookingRevisionEntity, CookingRevisionEntityProperty};
 use crate::smart_speaker::models::revision_model::Revision;
 use crate::smart_speaker::models::speak_model::MachineSpeechBoilerplate;
 use crate::smart_speaker::models::step_model::cooking_step::CookingStepBuilder;
@@ -20,34 +21,86 @@ pub(crate) enum SmartSpeakerMaterialProperty {
 
 #[derive(Debug, Clone)]
 pub(crate) struct CookingIngredientTime {
-    pub(crate) name: CookingIngredientName,
+    pub(crate) base: CookingIngredient,
     pub(crate) time: u32,
 }
 
 impl CookingIngredientTime {
-    pub(crate) fn new(name: CookingIngredientName, time: u32) -> Self {
+    pub(crate) fn new(base: CookingIngredient, time: u32) -> Self {
         CookingIngredientTime {
-            name,
+            base,
             time,
         }
     }
-}
 
+    pub(crate) fn calc_time_by_revision(&self, rev: &CookingRevisionEntity) -> Option<CookingIngredientTime> {
+        // calculate the time by base time with revision as quarter. 10min is 100 u32 in time.
+        // If base is mg(250)/10min and rev is sub(mg(65)), the new base time is 7.5min(75) that means the time should be reduced by 3/4.
+        // The quota calculation also approximates the value so that it falls in the 4/4 range whenever possible.
+        // in this situation, if base=mg(250)/10min and rev=sub(mg(65))
+        // the result is mg(250)/7.5min(75)
+        // if base=mg(250)/10min and rev=add(mg(65))
+        // the result is mg(250)/12.5min(125)
+        // if base=mg(250)/10min and rev=add(mg(250))
+        // the result is mg(250)/20min(200)
+        let adjustment_factor = match &rev.property {
+            CookingRevisionEntityProperty::Sub(ingredient) | CookingRevisionEntityProperty::Add(ingredient) => {
+                if ingredient.name != self.base.name {
+                    return None;
+                }
+                let revised_amount = if let CookingRevisionEntityProperty::Sub(_) = &rev.property {
+                    self.base.amount() - ingredient.amount()
+                } else {
+                    self.base.amount() + ingredient.amount()
+                };
+                1.0 + (revised_amount / self.base.amount()).sqrt()
+            }
+        };
+
+        let new_time = ((self.time as f32).sqrt() * adjustment_factor).round() as u32;
+        let bounded_time = new_time.min(300).max(30);
+        Some(CookingIngredientTime::new(self.base.clone(), bounded_time))
+    }
+
+    pub(crate) fn to_human_time(&self) -> SmartSpeakerI18nText {
+        // 10 is 1min and 5 is 30sec. This would make 1 = 6sec, but the seconds value we need here is to cut in increments of 10sec, so 9=54sec, but we need to return 50sec.
+        // The SmartSpeakerI18nText result should be simplified to {} min {} sec when there is sec information, and {} min when there is no sec information.
+        let minutes = self.time / 10;
+        let remaining_seconds = (self.time % 10) * 6; // Convert to seconds, each unit is 6 seconds
+
+        let rounded_seconds = 10 + ((remaining_seconds + 4) / 10) * 10; // Round to the nearest 10 seconds
+
+        if rounded_seconds > 0 {
+            SmartSpeakerI18nText::new()
+                .en(&format!("{} minutes {} seconds", minutes, rounded_seconds))
+                .ja(&format!("{}分{}秒", minutes, rounded_seconds))
+                .zh(&format!("{}分{}秒", minutes, rounded_seconds))
+                .ko(&format!("{}분{}초", minutes, rounded_seconds))
+        } else {
+            SmartSpeakerI18nText::new()
+                .en(&format!("{} minutes", minutes))
+                .ja(&format!("{}分", minutes))
+                .zh(&format!("{}分", minutes))
+                .ko(&format!("{}분", minutes))
+        }
+    }
+}
 
 pub(crate) fn amount_to_approx_quarter(lhs: i32, rhs: i32) -> CookingIngredientAmountQuarter {
     // This function compares the number of LHS and RHS (the base) and returns a number in the range of 4/4.
     // The CookingIngredientAmountQuarter value is 4/4 = 1 piece.
     // For example, if the base is 1000, the range is 250, 500, 750, 1000.
-    let base = rhs / 4;
-    if lhs < base {
-        CookingIngredientAmountQuarter::new(1)
-    } else if lhs < base * 2 {
-        CookingIngredientAmountQuarter::new(2)
-    } else if lhs < base * 3 {
-        CookingIngredientAmountQuarter::new(3)
-    } else {
-        CookingIngredientAmountQuarter::new(4)
+    if rhs == 0 {
+        return CookingIngredientAmountQuarter::new(0);
     }
+
+    // Calculate the quarter value based on LHS divided by the base (rhs) and multiplied by 4
+    let quarter_value = ((lhs as f32 / rhs as f32) * 4.0).round() as i32;
+
+    // Ensure the quarter value is greater than or equal to 1
+    let clamped_quarter = quarter_value.max(1);
+
+    CookingIngredientAmountQuarter::new(clamped_quarter)
 }
 
 #[derive(Debug, Clone)]
@@ -63,14 +116,62 @@ impl CookingIngredientLinkComponent {
             components,
         }
     }
+
+    pub(crate) fn calc_components_amount_by_main_revision(&self, rev: &CookingRevisionEntity) -> Vec<CookingIngredient> {
+        // calculate the components(seasoning ingredients) amount by main ingredient amount with revision as quarter.
+        // If main is mg(1000) and rev is sub(mg(250)), the new main amount is mg(750) that means the components connected to main should be reduced by 3/4.
+        // The quota calculation also approximates the value so that it falls in the 4/4 range whenever possible.
+        // in this situation, if main=1000, components=vec![salt(mg(50)), pepper(mg(50)), sesame_oil(ml(5))] and rev=sub(mg(250))
+        // the result is vec![salt(mg(40)), pepper(mg(40)), sesame_oil(ml(40))]
+        // if main=mg(1000), components=vec![salt(mg(5)), pepper(mg(5)), sesame_oil(ml(5))] and rev=add(mg(500))
+        // the result is vec![salt(mg(70)), pepper(mg(70)), sesame_oil(ml(7))]
+        // if main=mg(1000), components=vec![salt(mg(5)), pepper(mg(5)), sesame_oil(ml(5))] and rev=add(mg(1000))
+        // the result is vec![salt(mg(100)), pepper(mg(100)), sesame_oil(ml(10))]
+        let adjustment_factor = match &rev.property {
+            CookingRevisionEntityProperty::Sub(ingredient) => {
+                1.0 - ingredient.amount() / self.main.amount()
+            }
+            CookingRevisionEntityProperty::Add(ingredient) => {
+                1.0 + ingredient.amount() / self.main.amount()
+            },
+        };
+        dbg!(&adjustment_factor);
+
+        // Iterate over the components and calculate the adjusted amount for each.
+        let result: Vec<CookingIngredient> = self
+            .components
+            .iter()
+            .map(|ingredient| {
+                let adjusted_amount = match ingredient.unit {
+                    CookingIngredientAmount::MilliGram(amount) => {
+                        let amount = (amount as f32 * adjustment_factor).round() as i32;
+                        CookingIngredientAmount::MilliGram(amount)
+                    }
+                    CookingIngredientAmount::MilliLiter(amount) => {
+                        let amount = (amount as f32 * adjustment_factor).round() as i32;
+                        CookingIngredientAmount::MilliLiter(amount)
+                    }
+                    CookingIngredientAmount::Piece(amount) => {
+                        let amount = (amount.value as f32 * adjustment_factor).round() as i32;
+                        CookingIngredientAmount::Piece(CookingIngredientAmountQuarter::new(amount))
+                    }
+                    _ => {
+                        ingredient.unit.clone()
+                    }
+                };
+                CookingIngredient::new(ingredient.name.clone(), adjusted_amount)
+            }).collect();
+        dbg!(&result);
+        return result
+    }
 }
 
 const COOKING_INGREDIENT_AMOUNT_TBSP_TO_ML: i32 = 15;
 const COOKING_INGREDIENT_AMOUNT_TSP_TO_ML: i32 = 5;
 const COOKING_INGREDIENT_AMOUNT_CUP_TO_ML: i32 = 200;
-const COOKING_INGREDIENT_AMOUNT_TBSP_TO_MILLIGRAM: i32 = 15;
-const COOKING_INGREDIENT_AMOUNT_TSP_TO_MILLIGRAM: i32 = 5;
-const COOKING_INGREDIENT_AMOUNT_CUP_TO_MILLIGRAM: i32 = 200;
+const COOKING_INGREDIENT_AMOUNT_TBSP_TO_MILLIGRAM: i32 = 150;
+const COOKING_INGREDIENT_AMOUNT_TSP_TO_MILLIGRAM: i32 = 50;
+const COOKING_INGREDIENT_AMOUNT_CUP_TO_MILLIGRAM: i32 = 2000;
 
 #[derive(Debug, Clone)]
 pub(crate) struct CookingIngredient {
@@ -86,12 +187,16 @@ impl CookingIngredient {
         }
     }
 
+    pub(crate) fn amount(&self) -> f32 {
+        self.unit.get_value()
+    }
+
     pub(crate) fn to_approx_unit_i18n(&self) -> SmartSpeakerI18nText {
         match self.unit {
             CookingIngredientAmount::MilliGram(amount) => {
                 match self.name.to_material_property() {
                     SmartSpeakerMaterialProperty::Powder => {
-                        if amount < COOKING_INGREDIENT_AMOUNT_TBSP_TO_ML {
+                        if amount < COOKING_INGREDIENT_AMOUNT_TBSP_TO_MILLIGRAM {
                             let tsp = amount_to_approx_quarter(amount, COOKING_INGREDIENT_AMOUNT_TSP_TO_MILLIGRAM);
                             CookingIngredientAmount::Tsp(tsp).to_i18n()
                         } else {
@@ -323,6 +428,30 @@ impl CookingIngredientName {
             }
         }
     }
+
+    pub(crate) fn get_weight_per_perimeter(&self, perimeter: f32) -> CookingIngredientAmount {
+        // perimeter error bound: 10%
+        // criteria value: (perimeter, weight(mg))
+        // Returns the value in 25g increments with a margin of error.
+        match self {
+            CookingIngredientName::Carrot => {
+                let criteria = (50.0, 1000);
+                let adjusted_perimeter = perimeter * 1.1;
+                let calculated_weight = (adjusted_perimeter / criteria.0) * criteria.1 as f32;
+                let weight_with_error = calculated_weight * 0.9;
+
+                let rounded_weight = if perimeter >= 50.0 {
+                    ((weight_with_error / 25.0).round()) as i32 * 25
+                } else {
+                    ((weight_with_error / 2.5).round()) as i32 * 2
+                };
+                CookingIngredientAmount::MilliGram(rounded_weight)
+            }
+            _ => {
+                CookingIngredientAmount::MilliGram(0)
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -335,6 +464,10 @@ impl CookingIngredientAmountQuarter {
         CookingIngredientAmountQuarter {
             value,
         }
+    }
+
+    pub(crate) fn get_value(&self) -> f32 {
+        self.value as f32 * 0.25
     }
 
     fn add(self, other: Self) -> Self {
@@ -354,23 +487,23 @@ impl CookingIngredientAmountQuarter {
             1 => {
                 SmartSpeakerI18nText::new()
                     .en("a quarter")
-                    .ja("1/4")
+                    .ja("4分の1")
                     .zh("四分之一")
-                    .ko("1/4")
+                    .ko("사분의 일")
             }
             2 => {
                 SmartSpeakerI18nText::new()
                     .en("half")
-                    .ja("1/2")
+                    .ja("二分の一")
                     .zh("一半")
                     .ko("반")
             }
             3 => {
                 SmartSpeakerI18nText::new()
                     .en("three quarters")
-                    .ja("3/4")
+                    .ja("4分の3")
                     .zh("四分之三")
-                    .ko("3/4")
+                    .ko("사분의 삼")
             }
             _ => {
                 let full = self.value / 4;
@@ -404,6 +537,29 @@ pub(crate) enum CookingIngredientAmount {
 }
 
 impl CookingIngredientAmount {
+    pub(crate) fn get_value(&self) -> f32 {
+        match self {
+            CookingIngredientAmount::MilliGram(amount) => {
+                *amount as f32
+            }
+            CookingIngredientAmount::MilliLiter(amount) => {
+                *amount as f32
+            }
+            CookingIngredientAmount::Piece(amount) => {
+                amount.get_value()
+            }
+            CookingIngredientAmount::Tbsp(amount) => {
+                amount.get_value()
+            }
+            CookingIngredientAmount::Tsp(amount) => {
+                amount.get_value()
+            }
+            CookingIngredientAmount::Cup(amount) => {
+                amount.get_value()
+            }
+        }
+    }
+
     pub(crate) fn to_i18n(&self) -> SmartSpeakerI18nText {
         match self {
             CookingIngredientAmount::MilliGram(amount) => {
@@ -588,6 +744,29 @@ impl CookingIngredientAmount {
             }
         }
     }
+
+    pub(crate) fn abs(&self) -> Self {
+        match self {
+            CookingIngredientAmount::MilliGram(amount) => {
+                CookingIngredientAmount::MilliGram(amount.abs())
+            }
+            CookingIngredientAmount::MilliLiter(amount) => {
+                CookingIngredientAmount::MilliLiter(amount.abs())
+            }
+            CookingIngredientAmount::Piece(amount) => {
+                CookingIngredientAmount::Piece(amount.clone())
+            }
+            CookingIngredientAmount::Tbsp(amount) => {
+                CookingIngredientAmount::Tbsp(amount.clone())
+            }
+            CookingIngredientAmount::Tsp(amount) => {
+                CookingIngredientAmount::Tsp(amount.clone())
+            }
+            CookingIngredientAmount::Cup(amount) => {
+                CookingIngredientAmount::Cup(amount.clone())
+            }
+        }
+    }
 }
 
 
@@ -640,18 +819,21 @@ impl Task for CookingTask {
                 return match trigger {
                     ActionTriggerType::None => {
                         Ok(SmartSpeakerTaskResult::with_tts(
+                            trigger.to_task_type(),
                             SmartSpeakerTaskResultCode::TaskFailed(trigger.to_waiting_interaction()),
                             MachineSpeechBoilerplate::IntentFailed.to_i18n(),
                         ))
                     }
                     ActionTriggerType::Confirm => {
                         Ok(SmartSpeakerTaskResult::with_tts(
+                            trigger.to_task_type(),
                             SmartSpeakerTaskResultCode::TaskFailed(trigger.to_waiting_interaction()),
                             MachineSpeechBoilerplate::IntentFailed.to_i18n(),
                         ))
                     }
                     ActionTriggerType::Vision(_) => {
                         Ok(SmartSpeakerTaskResult::with_tts(
+                            trigger.to_task_type(),
                             SmartSpeakerTaskResultCode::TaskFailed(trigger.to_waiting_interaction()),
                             MachineSpeechBoilerplate::VisionFailed.to_i18n(),
                         ))
@@ -660,7 +842,7 @@ impl Task for CookingTask {
             }
             Some(content) => {
                 if let Some(revision) = &self.last_revision {
-                    let _ = current_action.feed(content, Some(revision.clone_box()));
+                    let _ = current_action.feed(content, Some(revision.clone()));
                 } else {
                     let _ = current_action.feed(content, None);
                 }
@@ -682,11 +864,19 @@ impl Task for CookingTask {
             SmartSpeakerTaskResultCode::StepSuccess => {
                 if let Ok(move_next_success) = self.internal_move_next() {
                     if move_next_success {
-                        // replace with next action
                         let next_action = self.step[self.current_step].clone();
                         let mut updated_result = result.clone();
-                        updated_result.code = SmartSpeakerTaskResultCode::TaskSuccess(next_action.get_action_trigger_type().to_waiting_interaction());
+                        if result.task_type == SmartSpeakerTaskType::Vision {
+                            updated_result.code = SmartSpeakerTaskResultCode::TaskSuccess(WaitingInteraction::Skip);
+                        } else {
+                            updated_result.code = SmartSpeakerTaskResultCode::TaskSuccess(next_action.get_action_trigger_type().to_waiting_interaction());
+                        }
                         self.previous_success_result = Some(updated_result.clone());
+                        result.revision.and_then(|r| {
+                            self.last_revision = Some(r);
+                            dbg!(&self.last_revision);
+                            Some(())
+                        });
                         return Ok(updated_result)
                     } else {
                         let mut updated_result = result.clone();
@@ -719,9 +909,11 @@ impl Task for CookingTask {
 
     fn failed(&mut self, content: Option<Box<dyn Content>>) -> Result<SmartSpeakerTaskResult> {
         let mut current_action = self.step[self.current_step].clone();
-        match current_action.get_action_trigger_type() {
+        let trigger = current_action.get_action_trigger_type();
+        match trigger {
             ActionTriggerType::Vision(_) => {
                 Ok(SmartSpeakerTaskResult::with_tts(
+                    trigger.to_task_type(),
                     SmartSpeakerTaskResultCode::TaskFailed(
                         current_action.get_action_trigger_type().to_waiting_interaction()),
                     MachineSpeechBoilerplate::VisionFailed.to_i18n(),
@@ -729,6 +921,7 @@ impl Task for CookingTask {
             }
             _ => {
                 Ok(SmartSpeakerTaskResult::with_tts(
+                    trigger.to_task_type(),
                     SmartSpeakerTaskResultCode::TaskFailed(
                         current_action.get_action_trigger_type().to_waiting_interaction()),
                     MachineSpeechBoilerplate::IntentFailed.to_i18n(),
@@ -753,6 +946,7 @@ impl Task for CookingTask {
 
     fn exit(&self) -> Result<SmartSpeakerTaskResult> {
         Ok(SmartSpeakerTaskResult::with_tts(
+            SmartSpeakerTaskType::NonVision,
             SmartSpeakerTaskResultCode::Exit,
             SmartSpeakerI18nText::new()
                 .en("cooking task exit")
@@ -764,6 +958,7 @@ impl Task for CookingTask {
 
     fn cancel(&self) -> Result<SmartSpeakerTaskResult> {
         Ok(SmartSpeakerTaskResult::with_tts(
+            SmartSpeakerTaskType::NonVision,
             SmartSpeakerTaskResultCode::Cancelled,
             SmartSpeakerI18nText::new()
                 .en("cooking task cancelled")

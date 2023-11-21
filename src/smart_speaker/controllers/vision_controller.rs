@@ -112,7 +112,7 @@ pub(crate) fn measure_object_size_by_aruco(aruco_corners: &VectorOfVectorOfPoint
         let mut perimeter_candidates: Vec<f32> = Vec::new();
         for i in 0..ratios.len() {
             let object_width = vision_util::pixel_to_metric(
-                width.clone(),
+                width,
                 width_ratios.get(i).unwrap());
             let object_height = vision_util::pixel_to_metric(
                 height,
@@ -125,9 +125,9 @@ pub(crate) fn measure_object_size_by_aruco(aruco_corners: &VectorOfVectorOfPoint
         let object_height = height_candidates.iter().sum::<f32>() / height_candidates.len() as f32;
         let object_perimeter = perimeter_candidates.iter().sum::<f32>() / perimeter_candidates.len() as f32;
         results.push(VisionObjectSize::new(
+            object_perimeter,
             object_width,
             object_height,
-            object_perimeter,
         ));
     }
 

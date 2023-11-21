@@ -199,8 +199,8 @@ pub(crate) fn get_measure_criteria_from_aruco(aruco_corners: &VectorOfVectorOfPo
         square.points(&mut points).unwrap();
         let width = distance(&points[1].x, &points[1].y, &points[2].x, &points[2].y);
         let height = distance(&points[0].x, &points[0].y, &points[1].x, &points[1].y);
-        let width_ratio = aruco_side_ratio(width.clone());
-        let height_ratio = aruco_side_ratio(height.clone());
+        let width_ratio = aruco_side_ratio(width);
+        let height_ratio = aruco_side_ratio(height);
         width_ratios.push(width_ratio);
         height_ratios.push(height_ratio);
     }

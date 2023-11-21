@@ -57,6 +57,7 @@ PICOVOICE_MIC_INDEX=indexhere
   * [ ] Query actor (deprecated. for RPC)
 * Task
   * [X] Task model base
-  * [ ] Cooking task structure
-    * [ ] Ingredient revision model
-    * [ ] (Cooking) Carrot salad
+  * [X] Cooking task structure
+    * [X] Ingredient revision model
+    * [X] (Cooking) Carrot salad Non-vision task
+    * [X] (Cooking) Carrot salad vision task

@@ -7,7 +7,7 @@ use crate::smart_speaker::models::step_model::generic_step::{ActionExecutable, A
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode};
 use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction, VisionObject};
 use crate::smart_speaker::models::message_model::*;
-use crate::smart_speaker::models::revision_model::cooking_revision::{CookingRevision, CookingRevisionEntity};
+use crate::smart_speaker::models::revision_model::cooking_revision::{CookingRevision, CookingRevisionEntity, CookingRevisionEntityProperty};
 use crate::smart_speaker::models::revision_model::Revision;
 use crate::smart_speaker::models::task_model::cooking_task::{CookingIngredient, CookingIngredientAmount, CookingIngredientLinkComponent, CookingIngredientName, CookingIngredientTime, SmartSpeakerMaterialProperty};
 
@@ -17,7 +17,7 @@ pub(crate) enum CookingActionDetail {
     ExplainNonMutableIngredient,
     ExplainMutableIngredient(CookingIngredientLinkComponent),
     ExplainMutableTime(CookingIngredientTime),
-    MeasureWholeIngredient,
+    MeasureIngredientSize,
     MeasureCutIngredient,
 }
 
@@ -51,10 +51,12 @@ impl ActionExecutable for ExplainRecipeAction {
     fn execute(&self) -> Result<SmartSpeakerTaskResult> {
         if self.has_cancelled() {
             return Ok(SmartSpeakerTaskResult::new(
+                self.get_action_trigger_type().to_task_type(),
                 SmartSpeakerTaskResultCode::Cancelled));
         }
         if self.has_request_repeat() {
             return Ok(SmartSpeakerTaskResult::new(
+                self.get_action_trigger_type().to_task_type(),
                 SmartSpeakerTaskResultCode::RepeatPrevious));
         }
         let mut reg = Handlebars::new();
@@ -145,26 +147,68 @@ impl ActionExecutable for ExplainRecipeAction {
                                 })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                             }
                             Some(rev) => {
-                                let mut ingredients_updated: Vec<(&str, &str)> = vec![];
-                                for entity in &rev.entities {
-                                    match entity {
-                                        CookingRevisionEntity::Add(ing) => {
-                                            if link.main.name == ing.name {
-                                                let amount_diff = link.main.unit.add(ing.unit).unwrap();
-                                            }
-                                            // let orig = self.ingredients.iter().find(|i| i.name == ing.name).unwrap();
-                                        }
-                                        CookingRevisionEntity::Remove(ing) => {}
-                                        _ => {}
-                                    }
-                                }
+                                let mut ingredients_updated = vec![];
+                                let mut revision_entities_updated = vec![];
+                                self.current_revision.clone().and_then(|mut r| {
+                                    r.entities.pop().and_then(
+                                        |entity| {
+                                            ingredients_updated = link.calc_components_amount_by_main_revision(&entity);
+                                            None::<CookingRevision>
+                                        });
+                                    revision_entities_updated = r.entities;
+                                    None::<CookingRevision>
+                                });
                                 if ingredients_updated.len() == 0 {
-                                    return Ok(SmartSpeakerTaskResult::with_tts(
+                                    return Ok(SmartSpeakerTaskResult::with_tts_and_revision(
+                                        self.get_action_trigger_type().to_task_type(),
                                         SmartSpeakerTaskResultCode::StepFailed,
                                         tts_script,
+                                        Box::new(rev.clone()),
+                                    ));
+                                } else {
+                                    tts_script.en = reg.render_template(&self.tts_script.en, &json!({
+                                        "salt": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Salt).and_then(|object| Some(object.to_approx_unit_i18n().en)),
+                                        "pepper": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Pepper).and_then(|object| Some(object.to_approx_unit_i18n().en)),
+                                        "sugar": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Sugar).and_then(|object| Some(object.to_approx_unit_i18n().en)),
+                                        "soy_sauce": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::SoySauce).and_then(|object| Some(object.to_approx_unit_i18n().en)),
+                                        "sesame": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Sesame).and_then(|object| Some(object.to_approx_unit_i18n().en)),
+                                        "sesame_oil": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::SesameOil).and_then(|object| Some(object.to_approx_unit_i18n().en)),
+                                        "carrot": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Carrot).and_then(|object| Some(object.to_approx_unit_i18n().en)),
+                                    })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                                    tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
+                                        "salt": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Salt).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
+                                        "pepper": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Pepper).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
+                                        "sugar": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Sugar).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
+                                        "soy_sauce": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::SoySauce).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
+                                        "sesame": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Sesame).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
+                                        "sesame_oil": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::SesameOil).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
+                                        "carrot": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Carrot).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
+                                    })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                                    tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
+                                        "salt": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Salt).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
+                                        "pepper": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Pepper).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
+                                        "sugar": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Sugar).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
+                                        "soy_sauce": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::SoySauce).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
+                                        "sesame": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Sesame).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
+                                        "sesame_oil": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::SesameOil).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
+                                        "carrot": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Carrot).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
+                                    })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                                    tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
+                                        "salt": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Salt).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
+                                        "pepper": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Pepper).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
+                                        "sugar": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Sugar).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
+                                        "soy_sauce": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::SoySauce).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
+                                        "sesame": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Sesame).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
+                                        "sesame_oil": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::SesameOil).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
+                                        "carrot": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Carrot).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
+                                    })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                                    return Ok(SmartSpeakerTaskResult::with_tts_and_revision(
+                                        self.get_action_trigger_type().to_task_type(),
+                                        SmartSpeakerTaskResultCode::StepSuccess,
+                                        tts_script,
+                                        Box::new(CookingRevision::new(revision_entities_updated)),
                                     ));
                                 }
-                                tts_script.en = reg.render_template(&self.tts_script.en, &json!(ingredients_updated)).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                             }
                         }
                     }
@@ -172,51 +216,84 @@ impl ActionExecutable for ExplainRecipeAction {
                         match &self.current_revision {
                             None => {
                                 tts_script.en = reg.render_template(&self.tts_script.en, &json!({
-                                    "time": criteria.time
+                                    "time": criteria.to_human_time().en
                                 })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                                 tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
-                                    "time": criteria.time
+                                    "time": criteria.to_human_time().ja
                                 })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                                 tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
-                                    "time": criteria.time
+                                    "time": criteria.to_human_time().zh
                                 })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                                 tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
-                                    "time": criteria.time
+                                    "time": criteria.to_human_time().ko
                                 })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                             }
                             Some(rev) => {
-                                for entity in &rev.entities {
-                                    match entity {
-                                        CookingRevisionEntity::Add(ing) => {
-                                            if ing.name == criteria.name {
-                                                let origin = self.ingredients.iter().find(|i| i.name == criteria.name).unwrap();
-                                                // let amount_diff
-                                                // criteria.time
-                                            }
-                                        }
-                                        CookingRevisionEntity::Remove(ing) => {
-                                            if ing.name == criteria.name {
-
-                                            }
-                                        }
-                                        _ => {}
-                                    }
-                                }
+                                let mut revision_entities_updated = vec![];
+                                self.current_revision.clone().and_then(|mut r| {
+                                    r.entities.pop().and_then(
+                                        |entity| {
+                                            let _ = criteria.calc_time_by_revision(&entity).and_then(|time| {
+                                                tts_script.en = reg.render_template(&self.tts_script.en, &json!({
+                                        "time": time.to_human_time().en
+                                    })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                                                tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
+                                        "time": time.to_human_time().ja
+                                    })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                                                tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
+                                        "time": time.to_human_time().zh
+                                    })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                                                tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
+                                        "time": time.to_human_time().ko
+                                    })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                                                None::<i32>
+                                            });
+                                            None::<CookingRevision>
+                                        });
+                                    revision_entities_updated = r.entities;
+                                    None::<CookingRevision>
+                                });
+                                return Ok(SmartSpeakerTaskResult::with_tts_and_revision(
+                                    self.get_action_trigger_type().to_task_type(),
+                                    SmartSpeakerTaskResultCode::StepSuccess,
+                                    tts_script,
+                                    Box::new(CookingRevision::new(revision_entities_updated)),
+                                ));
                             }
                         }
                     }
                     _ => {}
                 }
-                Ok(SmartSpeakerTaskResult::with_tts(
-                    SmartSpeakerTaskResultCode::StepSuccess,
-                    tts_script,
-                ))
+                self.current_revision.as_ref().map_or_else(
+                    || Ok(SmartSpeakerTaskResult::with_tts(
+                        self.get_action_trigger_type().to_task_type(),
+                        SmartSpeakerTaskResultCode::StepSuccess,
+                        tts_script.clone(),
+                    )),
+                    |rev| {
+                        Ok(SmartSpeakerTaskResult::with_tts_and_revision(
+                            self.get_action_trigger_type().to_task_type(),
+                            SmartSpeakerTaskResultCode::StepSuccess,
+                            tts_script.clone(),
+                            Box::new(rev.clone()),
+                        ))
+                    })
             },
             _ => {
-                Ok(SmartSpeakerTaskResult::with_tts(
-                    SmartSpeakerTaskResultCode::StepFailed,
-                    tts_script,
-                ))
+                self.current_revision.as_ref().map_or_else(
+                   ||  Ok(SmartSpeakerTaskResult::with_tts(
+                       self.get_action_trigger_type().to_task_type(),
+                        SmartSpeakerTaskResultCode::StepFailed,
+                        tts_script.clone(),
+                    )),
+                    |rev| {
+                        Ok(SmartSpeakerTaskResult::with_tts_and_revision(
+                            self.get_action_trigger_type().to_task_type(),
+                            SmartSpeakerTaskResultCode::StepFailed,
+                            tts_script.clone(),
+                            Box::new(rev.clone()),
+                        ))
+                    })
             }
         }
     }
@@ -305,25 +382,51 @@ impl VisionBasedIngredientMeasureAction {
 
     pub(crate) fn handle_vision_contents(&self, contents: &Vec<VisionObject>) -> Result<SmartSpeakerTaskResult> {
         let mut revisions: Vec<CookingRevisionEntity> = vec![];
-        for content in contents {
-            match self.detail {
-                CookingActionDetail::MeasureWholeIngredient => {
-                    match content.object_type {
-                        DetectableObject::Carrot => {
-                            self.ingredients.iter().find(|i| i.name == CookingIngredientName::Carrot).unwrap();
-
-                        }
-                        _ => {}
-                    }
-                }
-                CookingActionDetail::MeasureCutIngredient => {
-
-                }
-                _ => {}
+        self.current_revision.clone().and_then(|rev| {
+            for entity in rev.entities {
+                revisions.push(entity);
             }
-
+            None::<CookingRevision>
+        });
+        if contents.len() == 0 {
+            return Ok(SmartSpeakerTaskResult::with_tts(
+                self.get_action_trigger_type().to_task_type(),
+                SmartSpeakerTaskResultCode::StepFailed,
+                self.tts_script.clone(),
+            ))
         }
-        Ok(SmartSpeakerTaskResult::with_tts_and_revision(
+
+        match self.detail {
+            CookingActionDetail::MeasureIngredientSize => {
+                let largest = contents.iter().max_by(|a, b| a.size.perimeter.partial_cmp(&b.size.perimeter).unwrap()).unwrap();
+                match largest.object_type {
+                    DetectableObject::Carrot => {
+                        let target = self.ingredients.iter().find(|i| i.name == CookingIngredientName::Carrot).unwrap();
+                        let weight_approx = target.name.get_weight_per_perimeter(largest.size.perimeter);
+                        let diff = weight_approx.sub(target.unit).unwrap();
+                        if diff.get_value().is_sign_positive() {
+                            revisions.push(CookingRevisionEntity::new(
+                                0,
+                                CookingRevisionEntityProperty::Add(CookingIngredient {
+                                name: CookingIngredientName::Carrot,
+                                unit: diff.abs(),
+                            })));
+                        } else {
+                            revisions.push(CookingRevisionEntity::new(
+                                0,
+                                CookingRevisionEntityProperty::Sub(CookingIngredient {
+                                name: CookingIngredientName::Carrot,
+                                unit: diff.abs(),
+                            })));
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            _ => {}
+        }
+        return Ok(SmartSpeakerTaskResult::with_tts_and_revision(
+            self.get_action_trigger_type().to_task_type(),
             SmartSpeakerTaskResultCode::StepSuccess,
             self.tts_script.clone(),
             Box::new(CookingRevision::new(revisions)),
@@ -335,15 +438,18 @@ impl ActionExecutable for VisionBasedIngredientMeasureAction {
     fn execute(&self) -> Result<SmartSpeakerTaskResult> {
         if self.has_cancelled() {
             return Ok(SmartSpeakerTaskResult::new(
+                self.get_action_trigger_type().to_task_type(),
                 SmartSpeakerTaskResultCode::Cancelled));
         }
         if self.has_request_repeat() {
             return Ok(SmartSpeakerTaskResult::new(
+                self.get_action_trigger_type().to_task_type(),
                 SmartSpeakerTaskResultCode::RepeatPrevious));
         }
         return match &self.current_content {
             None => {
                 Ok(SmartSpeakerTaskResult::with_tts(
+                    self.get_action_trigger_type().to_task_type(),
                     SmartSpeakerTaskResultCode::StepFailed,
                     self.tts_script.clone(),
                 ))
@@ -352,6 +458,7 @@ impl ActionExecutable for VisionBasedIngredientMeasureAction {
                 match &content.action {
                     VisionAction::None => {
                         Ok(SmartSpeakerTaskResult::with_tts(
+                            self.get_action_trigger_type().to_task_type(),
                             SmartSpeakerTaskResultCode::StepSuccess,
                             self.tts_script.clone(),
                         ))
@@ -439,10 +546,10 @@ impl CookingStepBuilder {
                 vec![],
                 CookingActionDetail::None,
                 SmartSpeakerI18nText::new()
-                    .en(&format!("Let's start cooking {}. Tell me when you ready with an answer such as 'ok'.", menu.to_i18n().en))
-                    .ja(&format!("{}の調理を始めます。準備ができたら「オッケー」などの答えで教えてください。", menu.to_i18n().ja))
-                    .zh(&format!("让我们开始做{}。准备好了就告诉我，比如说“好的”。", menu.to_i18n().zh))
-                    .ko(&format!("{} 요리를 시작합니다. 준비가 되면 '오케이'와 같은 대답으로 알려주세요.", menu.to_i18n().ko))
+                    .ko(&format!("{} 요리를 시작합니다. 준비가 되면 '오케이' 또는 '다음' 과 같은 대답으로 알려주세요.", menu.to_i18n().ko))
+                    .en(&format!("Let's start {} cooking. Let me know when you are ready with a response like 'okay' or 'next'.", menu.to_i18n().en))
+                    .ja(&format!("{}料理を始めます。準備ができたら「オッケー」や「次」などで教えてください。", menu.to_i18n().ja))
+                    .zh(&format!("让我们开始{}烹饪。准备好后，请用“好”或“下一个”之类的回答告诉我。", menu.to_i18n().zh))
             )));
         steps.push(
             Box::new(ExplainRecipeAction::new(
@@ -470,10 +577,10 @@ impl CookingStepBuilder {
                     vec![],
                     CookingActionDetail::None,
                     SmartSpeakerI18nText::new()
-                        .ko("보다 정확한 레시피 안내를 위해 요리 재료의 크기 측정을 시작합니다. 당근을 측정용 도마 위에 올려주세요. 준비가 되면 '오케이'와 같은 대답으로 알려주세요.")
-                        .en("To provide more accurate recipe guidance, we will start measuring the size of the cooking ingredients. Place the carrots on the measuring chopping board. Let us know when it's ready with a response like 'okay'")
-                        .ja("より正確なレシピ案内のために食材の大きさを測定し始めます。人参を測定用のまな板の上に置いてください。準備ができたら「オッケー」などの答えで教えてください。")
-                        .zh("为了提供更准确的食谱指导，我们将开始测量烹饪食材的大小。把胡萝卜放在量板上。准备好了就告诉我，比如说“好的”。")
+                        .ko("보다 정확한 레시피 안내를 위해 요리 재료의 크기 측정을 시작합니다. 당근을 측정용 도마 위에 올려주세요. 준비가 되면 알려주세요.")
+                        .en("To provide more accurate recipe guidance, we will start measuring the size of the cooking ingredients. Place the carrots on the measuring chopping board. Let me know when it's ready.")
+                        .ja("より正確なレシピ案内のために食材の大きさを測定し始めます。人参を測定用のまな板の上に置いてください。準備ができたら教えてください。")
+                        .zh("为了提供更准确的食谱指导，我们将开始测量烹饪食材的大小。把胡萝卜放在量板上。准备好了就告诉我。")
                 ))
             );
             steps.push(
@@ -490,7 +597,7 @@ impl CookingStepBuilder {
             steps.push(
                 Box::new(VisionBasedIngredientMeasureAction::new(
                     vec![menu.to_ingredient().iter().find(|i| i.name == CookingIngredientName::Carrot).unwrap().clone()],
-                    CookingActionDetail::MeasureWholeIngredient,
+                    CookingActionDetail::MeasureIngredientSize,
                     VisionAction::ObjectDetectionWithAruco(DetectableObject::Carrot),
                     SmartSpeakerI18nText::new()
                         .ko("확인했습니다.")
@@ -516,10 +623,10 @@ impl CookingStepBuilder {
                     vec![],
                     CookingActionDetail::None,
                     SmartSpeakerI18nText::new()
-                        .ko("보다 정확한 레시피 안내를 위해 요리 재료의 크기 측정을 시작합니다. 잘라낸 한 조각을 측정용 도마 위에 올려주세요. 준비가 되면 '오케이'와 같은 대답으로 알려주세요.")
-                        .en("To provide more accurate recipe guidance, we will start measuring the size of the cooking ingredients. Place one of the cut pieces on the measuring chopping board. Let us know when it's ready with a response like 'okay'")
-                        .ja("より正確なレシピ案内のために食材の大きさを測定し始めます。切り分けた一つを測定用のまな板の上に置いてください。準備ができたら「オッケー」などの答えで教えてください。")
-                        .zh("为了提供更准确的食谱指导，我们将开始测量烹饪食材的大小。把切好的一块放在量板上。准备好了就告诉我，比如说“好的”。")
+                        .ko("보다 정확한 레시피 안내를 위해 요리 재료의 크기 측정을 시작합니다. 잘라낸 한 조각을 측정용 도마 위에 올려주세요. 준비가 되면 알려주세요.")
+                        .en("To provide more accurate recipe guidance, we will start measuring the size of the cooking ingredients. Place a piece of the cut carrot on the measuring chopping board. Let me know when it's ready.")
+                        .ja("より正確なレシピ案内のために食材の大きさを測定し始めます。切り取った一切れを測定用のまな板の上に置いてください。準備ができたら教えてください。")
+                        .zh("为了提供更准确的食谱指导，我们将开始测量烹饪食材的大小。把切好的一块胡萝卜放在量板上。准备好了就告诉我。")
                 ))
             );
             steps.push(
@@ -537,8 +644,8 @@ impl CookingStepBuilder {
                 Box::new(VisionBasedIngredientMeasureAction::new(
                     vec![CookingIngredient::new(
                         CookingIngredientName::Carrot,
-                        CookingIngredientAmount::MilliGram(10))],
-                    CookingActionDetail::MeasureCutIngredient,
+                        CookingIngredientAmount::MilliGram(100))],
+                    CookingActionDetail::MeasureIngredientSize,
                     VisionAction::ObjectDetectionWithAruco(DetectableObject::Carrot),
                     SmartSpeakerI18nText::new()
                         .ko("확인했습니다.")
@@ -551,14 +658,17 @@ impl CookingStepBuilder {
         steps.push(
             Box::new(ExplainRecipeAction::new(
                 vec![menu.to_ingredient().iter().find(|i| i.name == CookingIngredientName::Carrot).unwrap().clone()],
-                CookingActionDetail::ExplainMutableTime(CookingIngredientTime::new(
-                    CookingIngredientName::Carrot,
-                    10)),
-                SmartSpeakerI18nText::new() // replace to template!!
-                    .ko("손질한 당근을 끓는 물에 약 {{time}}분간 삶아주세요.")
-                    .en("Boil the carrots in boiling water for about {{time}} minutes.")
-                    .ja("人参を沸いた水に約{{time}}分間茹でます。")
-                    .zh("把胡萝卜放在沸水里煮约{{time}}分钟。")
+                CookingActionDetail::ExplainMutableTime(
+                    CookingIngredientTime::new(
+                    CookingIngredient::new(
+                        CookingIngredientName::Carrot,
+                        CookingIngredientAmount::MilliGram(100)),
+                    100)),
+                SmartSpeakerI18nText::new() // replace to template!
+                    .ko("손질한 당근을 끓는 물에 약 {{time}}간 삶아주세요.")
+                    .en("Boil the carrots in boiling water for about {{time}}.")
+                    .ja("人参を沸いた水に約{{time}}間茹でます。")
+                    .zh("把胡萝卜放在沸水里煮约{{time}}钟。")
             )));
         steps.push(
             Box::new(ExplainRecipeAction::new(

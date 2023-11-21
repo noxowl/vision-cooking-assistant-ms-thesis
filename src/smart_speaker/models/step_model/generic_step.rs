@@ -2,7 +2,7 @@ use std::fmt::{self, Debug, Formatter};
 use anyhow::{anyhow, Result};
 use crate::smart_speaker::models::core_model::WaitingInteraction;
 use crate::smart_speaker::models::intent_model::IntentAction;
-use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode};
+use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, SmartSpeakerTaskType};
 use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction};
 use crate::smart_speaker::models::message_model::*;
 use crate::smart_speaker::models::revision_model::Revision;
@@ -17,9 +17,17 @@ pub(crate) enum ActionTriggerType {
 impl ActionTriggerType {
     pub(crate) fn to_waiting_interaction(&self) -> WaitingInteraction {
         match self {
-            ActionTriggerType::None => WaitingInteraction::Speak,
+            ActionTriggerType::None => WaitingInteraction::Skip,
             ActionTriggerType::Confirm => WaitingInteraction::Speak,
             ActionTriggerType::Vision(actions) => WaitingInteraction::Vision(actions.clone()),
+        }
+    }
+
+    pub(crate) fn to_task_type(&self) -> SmartSpeakerTaskType {
+        match self {
+            ActionTriggerType::None => SmartSpeakerTaskType::NonVision,
+            ActionTriggerType::Confirm => SmartSpeakerTaskType::NonVision,
+            ActionTriggerType::Vision(_) => SmartSpeakerTaskType::Vision,
         }
     }
 }
@@ -30,13 +38,6 @@ pub(crate) trait ActionExecutable: Send {
     fn clone_box(&self) -> Box<dyn ActionExecutable>;
     fn as_any(&self) -> &dyn std::any::Any;
     fn get_action_trigger_type(&self) -> ActionTriggerType;
-    // fn get_trigger_type(&self) -> WaitingInteraction {
-    //     match self.get_action_trigger_type() {
-    //         ActionTriggerType::None => WaitingInteraction::Speak,
-    //         ActionTriggerType::Confirm => WaitingInteraction::Speak,
-    //         ActionTriggerType::Vision(actions) => WaitingInteraction::Vision(actions.clone()),
-    //     }
-    // }
 
     fn has_cancelled(&self) -> bool {
         self.get_cancelled()
@@ -128,10 +129,17 @@ impl ActionExecutable for GenericAction {
     fn execute(&self) -> Result<SmartSpeakerTaskResult> {
         if self.has_cancelled() {
             return Ok(SmartSpeakerTaskResult::new(
+                self.get_action_trigger_type().to_task_type(),
                 SmartSpeakerTaskResultCode::Cancelled));
         }
+        if self.has_request_repeat() {
+            return Ok(SmartSpeakerTaskResult::new(
+                self.get_action_trigger_type().to_task_type(),
+                SmartSpeakerTaskResultCode::RepeatPrevious));
+        }
         Ok(SmartSpeakerTaskResult::with_tts(
-            SmartSpeakerTaskResultCode::Exit,
+            self.get_action_trigger_type().to_task_type(),
+            SmartSpeakerTaskResultCode::StepSuccess,
             self.tts_script.clone(),
         ))
     }
@@ -210,7 +218,8 @@ impl ActionExecutable for CountVisionObjectAction {
         match &self.current_content {
             None => {
                 Ok(SmartSpeakerTaskResult::with_tts(
-                    SmartSpeakerTaskResultCode::Exit,
+                    self.get_action_trigger_type().to_task_type(),
+                    SmartSpeakerTaskResultCode::StepSuccess,
                     SmartSpeakerI18nText::new()
                         .en("I can't see anything")
                         .ja("何も見えませんでした")
@@ -221,7 +230,8 @@ impl ActionExecutable for CountVisionObjectAction {
             Some(content) => {
                 let count = content.entities.len();
                 Ok(SmartSpeakerTaskResult::with_tts(
-                    SmartSpeakerTaskResultCode::Exit,
+                    self.get_action_trigger_type().to_task_type(),
+                    SmartSpeakerTaskResultCode::StepSuccess,
                     SmartSpeakerI18nText::new()
                         .en(&format!("I see {} {}", count, self.vision_action.to_i18n().en))
                         .ja(&format!("{}個の{}が見えました", count, self.vision_action.to_i18n().ja))

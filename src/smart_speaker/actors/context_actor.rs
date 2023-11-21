@@ -160,7 +160,6 @@ impl ContextActor {
             }
             SmartSpeakerTaskResultCode::Exit => {
                 self.current_task = None;
-                write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Info("exit".to_string()));
                 self.set_next_state(SmartSpeakerState::Idle);
             }
             _ => {
@@ -182,9 +181,7 @@ impl ContextActor {
     }
 
     fn set_next_state(&mut self, state: SmartSpeakerState) {
-        write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug(format!("set next state: {:?}", &state).to_string()));
         self.next_state = Some(state);
-        write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug(format!("set next state finished: {:?}", &self.next_state).to_string()));
     }
 
     fn handle_next_state(&mut self) {
@@ -192,7 +189,6 @@ impl ContextActor {
         match &self.next_state {
             None => {}
             Some(state) => {
-                write_log_message(&self.sender, SmartSpeakerActors::ContextActor, SmartSpeakerLogMessageType::Debug(format!("handle next state remove this state: {:?}", &state).to_string()));
                 let current_state = state.clone();
                 self.next_state = None;
                 self.request_state_update(current_state);
