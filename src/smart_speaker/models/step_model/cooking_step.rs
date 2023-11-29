@@ -577,10 +577,10 @@ impl CookingStepBuilder {
                     vec![],
                     CookingActionDetail::None,
                     SmartSpeakerI18nText::new()
-                        .ko("보다 정확한 레시피 안내를 위해 요리 재료의 크기 측정을 시작합니다. 당근을 측정용 도마 위에 올려주세요. 준비가 되면 알려주세요.")
-                        .en("To provide more accurate recipe guidance, we will start measuring the size of the cooking ingredients. Place the carrots on the measuring chopping board. Let me know when it's ready.")
-                        .ja("より正確なレシピ案内のために食材の大きさを測定し始めます。人参を測定用のまな板の上に置いてください。準備ができたら教えてください。")
-                        .zh("为了提供更准确的食谱指导，我们将开始测量烹饪食材的大小。把胡萝卜放在量板上。准备好了就告诉我。")
+                        .ko("도마 위에 당근이 준비되었다면, 저도 볼 수 있게 손을 치워주실 수 있나요?")
+                        .en("If the carrots are ready on the chopping board, can you move your hands back so that I can see?")
+                        .ja("まな板の上に人参が用意できたら、私にも見えるように手をどけてくれますか？")
+                        .zh("如果胡萝卜准备好了，你能把手拿开让我看看吗？")
                 ))
             );
             steps.push(
@@ -588,10 +588,10 @@ impl CookingStepBuilder {
                     vec![],
                     CookingActionDetail::None,
                     SmartSpeakerI18nText::new()
-                        .ko("측정중입니다. 움직이지 말고 기다려 주세요.")
-                        .en("I will start measuring. Please do not move and wait.")
-                        .ja("測定を始めます。動かずにお待ちください。")
-                        .zh("我将开始测量。请不要动，等一下。")
+                        .ko("감사합니다.")
+                        .en("Thank you.")
+                        .ja("ありがとうございます。")
+                        .zh("谢谢。")
                 ))
             );
             steps.push(
@@ -623,10 +623,10 @@ impl CookingStepBuilder {
                     vec![],
                     CookingActionDetail::None,
                     SmartSpeakerI18nText::new()
-                        .ko("보다 정확한 레시피 안내를 위해 요리 재료의 크기 측정을 시작합니다. 잘라낸 한 조각을 측정용 도마 위에 올려주세요. 준비가 되면 알려주세요.")
-                        .en("To provide more accurate recipe guidance, we will start measuring the size of the cooking ingredients. Place a piece of the cut carrot on the measuring chopping board. Let me know when it's ready.")
-                        .ja("より正確なレシピ案内のために食材の大きさを測定し始めます。切り取った一切れを測定用のまな板の上に置いてください。準備ができたら教えてください。")
-                        .zh("为了提供更准确的食谱指导，我们将开始测量烹饪食材的大小。把切好的一块胡萝卜放在量板上。准备好了就告诉我。")
+                        .ko("당근을 어떻게 자르셨는지 저도 볼 수 있게 한 조각만 보여주실 수 있나요?")
+                        .en("Can you show me just one piece of carrot so that I can see how you cut it?")
+                        .ja("人参をどのように切ったか、私にも見せてくれますか？")
+                        .zh("你能给我看一块胡萝卜吗，这样我就能看到你是怎么切的了。")
                 ))
             );
             steps.push(
@@ -634,10 +634,10 @@ impl CookingStepBuilder {
                     vec![],
                     CookingActionDetail::None,
                     SmartSpeakerI18nText::new()
-                        .en("I will start measuring. Please do not move and wait.")
-                        .ja("測定を始めます。動かずにお待ちください。")
-                        .zh("我将开始测量。请不要动，等一下。")
-                        .ko("측정중입니다. 움직이지 말고 기다려 주세요.")
+                        .ko("감사합니다.")
+                        .en("Thank you.")
+                        .ja("ありがとうございます。")
+                        .zh("谢谢。")
                 ))
             );
             steps.push(
