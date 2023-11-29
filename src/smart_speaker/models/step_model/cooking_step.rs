@@ -382,6 +382,8 @@ impl VisionBasedIngredientMeasureAction {
 
     pub(crate) fn handle_vision_contents(&self, contents: &Vec<VisionObject>) -> Result<SmartSpeakerTaskResult> {
         let mut revisions: Vec<CookingRevisionEntity> = vec![];
+        let mut reg = Handlebars::new();
+        let mut tts_script = self.tts_script.clone();
         self.current_revision.clone().and_then(|rev| {
             for entity in rev.entities {
                 revisions.push(entity);
@@ -411,6 +413,18 @@ impl VisionBasedIngredientMeasureAction {
                                 name: CookingIngredientName::Carrot,
                                 unit: diff.abs(),
                             })));
+                            tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
+                                "measure_result": "레시피에서 요구하는 양보다 더 많은 것 같네요."
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.en = reg.render_template(&self.tts_script.en, &json!({
+                                "measure_result": "It seems to be more than the amount required by the recipe."
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
+                                "measure_result": "レシピで必要な量よりも多いようです。"
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
+                                "measure_result": "看起来比食谱所需的量多。"
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                         } else {
                             revisions.push(CookingRevisionEntity::new(
                                 0,
@@ -418,6 +432,18 @@ impl VisionBasedIngredientMeasureAction {
                                 name: CookingIngredientName::Carrot,
                                 unit: diff.abs(),
                             })));
+                            tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
+                                "measure_result": "레시피에서 요구하는 양보다 더 적은 것 같네요."
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.en = reg.render_template(&self.tts_script.en, &json!({
+                                "measure_result": "It seems to be less than the amount required by the recipe."
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
+                                "measure_result": "レシピで必要な量よりも少ないようです。"
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
+                                "measure_result": "看起来比食谱所需的量少。"
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                         }
                     }
                     _ => {}
@@ -577,10 +603,10 @@ impl CookingStepBuilder {
                     vec![],
                     CookingActionDetail::None,
                     SmartSpeakerI18nText::new()
-                        .ko("도마 위에 당근이 준비되었다면, 저도 볼 수 있게 손을 치워주실 수 있나요?")
-                        .en("If the carrots are ready on the chopping board, can you move your hands back so that I can see?")
-                        .ja("まな板の上に人参が用意できたら、私にも見えるように手をどけてくれますか？")
-                        .zh("如果胡萝卜准备好了，你能把手拿开让我看看吗？")
+                        .ko("도마 위에 당근이 준비되었다면, 저도 볼 수 있게 손을 치워주실 수 있나요? 준비가 되면 알려주세요.")
+                        .en("If the carrots are ready on the chopping board, can you move your hands back so that I can see? Let me know when you are ready.")
+                        .ja("まな板の上に人参が用意できたら、私にも見えるように手をどけてくれますか？ 準備ができたら教えてください。")
+                        .zh("如果胡萝卜准备好了，你能把手拿开让我看看吗？ 准备好后请告诉我。")
                 ))
             );
             steps.push(
@@ -600,10 +626,10 @@ impl CookingStepBuilder {
                     CookingActionDetail::MeasureIngredientSize,
                     VisionAction::ObjectDetectionWithAruco(DetectableObject::Carrot),
                     SmartSpeakerI18nText::new()
-                        .ko("확인했습니다.")
-                        .en("Checked.")
-                        .ja("確認しました。")
-                        .zh("确认了。")
+                        .ko("{{measure_result}} 이후의 설명에 참고하도록 하겠습니다.")
+                        .en("{{measure_result}} I'll keep that in mind for the rest of the instructions.")
+                        .ja("{{measure_result}} 残りの説明のために覚えておきます。")
+                        .zh("{{measure_result}} 我会记住剩下的说明。")
                 ))
             );
         }
@@ -623,10 +649,10 @@ impl CookingStepBuilder {
                     vec![],
                     CookingActionDetail::None,
                     SmartSpeakerI18nText::new()
-                        .ko("당근을 어떻게 자르셨는지 저도 볼 수 있게 한 조각만 보여주실 수 있나요?")
-                        .en("Can you show me just one piece of carrot so that I can see how you cut it?")
-                        .ja("人参をどのように切ったか、私にも見せてくれますか？")
-                        .zh("你能给我看一块胡萝卜吗，这样我就能看到你是怎么切的了。")
+                        .ko("당근을 어떻게 자르셨는지 저도 볼 수 있게 한 조각만 보여주실 수 있나요? 준비가 되면 알려주세요.")
+                        .en("Can you show me just one piece of carrot so that I can see how you cut it? Let me know when you are ready.")
+                        .ja("人参をどのように切ったか、私にも見せてくれますか？ 準備ができたら教えてください。")
+                        .zh("你能给我看一块胡萝卜吗，这样我就能看到你是怎么切的了。 准备好后请告诉我。")
                 ))
             );
             steps.push(
@@ -648,10 +674,10 @@ impl CookingStepBuilder {
                     CookingActionDetail::MeasureIngredientSize,
                     VisionAction::ObjectDetectionWithAruco(DetectableObject::Carrot),
                     SmartSpeakerI18nText::new()
-                        .ko("확인했습니다.")
-                        .en("Checked.")
-                        .ja("確認しました。")
-                        .zh("确认了。")
+                        .ko("{{measure_result}} 이후의 설명에 참고하도록 하겠습니다.")
+                        .en("{{measure_result}} I'll keep that in mind for the rest of the instructions.")
+                        .ja("{{measure_result}} 残りの説明のために覚えておきます。")
+                        .zh("{{measure_result}} 我会记住剩下的说明。")
                 ))
             );
         }
