@@ -410,39 +410,53 @@ impl VisionBasedIngredientMeasureAction {
                             revisions.push(CookingRevisionEntity::new(
                                 0,
                                 CookingRevisionEntityProperty::Add(CookingIngredient {
-                                name: CookingIngredientName::Carrot,
-                                unit: diff.abs(),
-                            })));
+                                    name: CookingIngredientName::Carrot,
+                                    unit: diff.abs(),
+                                })));
                             tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
                                 "measure_result": "레시피에서 요구하는 양보다 더 많은 것 같네요."
                             })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
-                            tts_script.en = reg.render_template(&self.tts_script.en, &json!({
+                                tts_script.en = reg.render_template(&self.tts_script.en, &json!({
                                 "measure_result": "It seems to be more than the amount required by the recipe."
                             })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
-                            tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
+                                tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
                                 "measure_result": "レシピで必要な量よりも多いようです。"
                             })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
-                            tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
+                                tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
                                 "measure_result": "看起来比食谱所需的量多。"
                             })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                         } else {
                             revisions.push(CookingRevisionEntity::new(
                                 0,
                                 CookingRevisionEntityProperty::Sub(CookingIngredient {
-                                name: CookingIngredientName::Carrot,
-                                unit: diff.abs(),
-                            })));
+                                    name: CookingIngredientName::Carrot,
+                                    unit: diff.abs(),
+                                })));
                             tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
                                 "measure_result": "레시피에서 요구하는 양보다 더 적은 것 같네요."
                             })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
-                            tts_script.en = reg.render_template(&self.tts_script.en, &json!({
+                                tts_script.en = reg.render_template(&self.tts_script.en, &json!({
                                 "measure_result": "It seems to be less than the amount required by the recipe."
                             })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
-                            tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
+                                tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
                                 "measure_result": "レシピで必要な量よりも少ないようです。"
                             })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
-                            tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
+                                tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
                                 "measure_result": "看起来比食谱所需的量少。"
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                        }
+                        if diff.get_value() <= (target.unit.get_value() * 0.05) {
+                            tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
+                                "measure_result": "레시피에서 요구하는 양과 비슷한 것 같네요."
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.en = reg.render_template(&self.tts_script.en, &json!({
+                                "measure_result": "It seems to be similar to the amount required by the recipe."
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
+                                "measure_result": "レシピで必要な量と似ているようです。"
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
+                                "measure_result": "看起来与食谱所需的量相似。"
                             })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                         }
                     }
