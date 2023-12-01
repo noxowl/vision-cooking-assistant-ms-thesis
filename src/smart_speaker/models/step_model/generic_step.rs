@@ -3,7 +3,7 @@ use anyhow::{anyhow, Result};
 use crate::smart_speaker::models::core_model::WaitingInteraction;
 use crate::smart_speaker::models::intent_model::IntentAction;
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode, SmartSpeakerTaskType};
-use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction};
+use crate::smart_speaker::models::vision_model::{DetectableObject, DetectionDetail, DetectionMode, VisionAction};
 use crate::smart_speaker::models::message_model::*;
 use crate::smart_speaker::models::revision_model::Revision;
 
@@ -205,7 +205,11 @@ pub(crate) struct CountVisionObjectAction {
 impl CountVisionObjectAction {
     pub(crate) fn new() -> Self {
         CountVisionObjectAction {
-            vision_action: VisionAction::ObjectDetectionWithAruco(DetectableObject::Carrot),
+            vision_action: VisionAction::ObjectDetection(DetectionDetail::new(
+                DetectionMode::Aruco,
+                DetectableObject::Carrot,
+                false,
+            )),
             current_content: None,
             cancelled: false,
             repeat_requested: false,

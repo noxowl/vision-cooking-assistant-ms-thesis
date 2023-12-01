@@ -41,3 +41,14 @@ pub(crate) fn draw_approx_poly_to_mat(mat: &mut Mat, approx: &VectorOfPoint2f) {
             0).unwrap();
     }
 }
+
+pub(crate) fn draw_line_to_mat(mat: &mut Mat, x1: i32, y1: i32, x2: i32, y2: i32) {
+    imgproc::line(
+        mat,
+        Point::new (x1, y1),
+        Point::new (x2, y2),
+        Scalar::new(0., 255., 0., 255.),
+        1,
+        0,
+        0).unwrap();
+}

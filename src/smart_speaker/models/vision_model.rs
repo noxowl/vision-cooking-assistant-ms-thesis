@@ -100,6 +100,29 @@ impl CaptureSource for CameraCaptureSource {
 }
 
 #[derive(Debug, Clone, PartialEq, Copy)]
+pub(crate) struct DetectionDetail {
+    pub(crate) detection_mode: DetectionMode,
+    pub(crate) detectable: DetectableObject,
+    pub(crate) gaze_assist: bool,
+}
+
+impl DetectionDetail {
+    pub(crate) fn new(detection_mode: DetectionMode, detectable: DetectableObject, gaze_assist: bool) -> Self {
+        Self {
+            detection_mode,
+            detectable,
+            gaze_assist,
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Copy)]
+pub(crate) enum DetectionMode {
+    None,
+    Aruco,
+}
+
+#[derive(Debug, Clone, PartialEq, Copy)]
 pub(crate) enum DetectableObject {
     Carrot,
     HumanSkin,
@@ -129,7 +152,7 @@ impl DetectableObject {
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub(crate) enum VisionAction {
     None,
-    ObjectDetectionWithAruco(DetectableObject),
+    ObjectDetection(DetectionDetail),
 }
 
 impl VisionAction {
@@ -142,12 +165,12 @@ impl VisionAction {
                     .zh("什么都没有")
                     .ko("아무것도 없음")
             }
-            VisionAction::ObjectDetectionWithAruco(object) => {
+            VisionAction::ObjectDetection(object) => {
                 SmartSpeakerI18nText::new()
-                    .en(&format!("{} with aruco", object.to_i18n().en))
-                    .ja(&format!("アルコで{}を検出", object.to_i18n().ja))
-                    .zh(&format!("使用 aruco 检测{}", object.to_i18n().zh))
-                    .ko(&format!("aruco로 {}를 감지", object.to_i18n().ko))
+                    .en(&format!("{} with aruco", object.detectable.to_i18n().en))
+                    .ja(&format!("アルコで{}を検出", object.detectable.to_i18n().ja))
+                    .zh(&format!("使用 aruco 检测{}", object.detectable.to_i18n().zh))
+                    .ko(&format!("aruco로 {}를 감지", object.detectable.to_i18n().ko))
             }
         }
     }
@@ -155,7 +178,7 @@ impl VisionAction {
     pub(crate) fn expose_object(&self) -> Option<DetectableObject> {
         match self {
             VisionAction::None => { None }
-            VisionAction::ObjectDetectionWithAruco(object) => { Some(object.clone()) }
+            VisionAction::ObjectDetection(detail) => { Some(detail.detectable.clone()) }
         }
     }
 }

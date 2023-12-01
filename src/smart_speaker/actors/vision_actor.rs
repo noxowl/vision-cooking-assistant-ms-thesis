@@ -4,11 +4,13 @@ use std::time::Duration;
 use anyhow::{anyhow, Result};
 use bounded_vec_deque::BoundedVecDeque;
 use opencv::{core::Mat, core::Vector, types::VectorOfVectorOfPoint2f};
+use opencv::prelude::MatTraitConst;
 use crate::smart_speaker::controllers::vision_controller;
 use crate::smart_speaker::models::core_model::{WaitingInteraction, SmartSpeakerState};
-use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction, VisionObject, VisionSlot};
+use crate::smart_speaker::models::vision_model::{DetectableObject, DetectionDetail, DetectionMode, VisionAction, VisionObject, VisionSlot};
 use crate::smart_speaker::models::message_model::*;
 use crate::utils::message_util::*;
+use crate::utils::vision_util;
 
 pub(crate) struct VisionActor {
     alive: bool,
@@ -84,15 +86,21 @@ impl VisionActor {
                                 for action in actions {
                                     match action {
                                         VisionAction::None => {}
-                                        VisionAction::ObjectDetectionWithAruco(target) => {
-                                            match self.handle_object_detection_with_aruco(target) {
-                                                Ok(content) => {
-                                                    result.push(content);
-                                                }
-                                                Err(_) => {
-                                                    self.send_vision_finalized(ProcessResult::Failure, vec![]);
+                                        VisionAction::ObjectDetection(detail) => {
+                                            match detail.detection_mode {
+                                                DetectionMode::None => {}
+                                                DetectionMode::Aruco => {
+                                                    match self.handle_object_detection_with_aruco(detail.clone()) {
+                                                        Ok(content) => {
+                                                            result.push(content);
+                                                        }
+                                                        Err(_) => {
+                                                            self.send_vision_finalized(ProcessResult::Failure, vec![]);
+                                                        }
+                                                    }
                                                 }
                                             }
+
                                         }
                                     }
                                 }
@@ -125,7 +133,7 @@ impl VisionActor {
         self.previous_gaze_info.push_back((x, y));
     }
 
-    fn handle_object_detection_with_aruco(&self, target: DetectableObject) -> Result<VisionContent> {
+    fn handle_object_detection_with_aruco(&self, detail: DetectionDetail) -> Result<VisionContent> {
         match self.previous_aruco_info.back() {
             None => {
                 Err(anyhow!("failed to detect target objects: no aruco data"))
@@ -133,26 +141,55 @@ impl VisionActor {
             Some((aruco, aruco_index)) => {
                 match self.previous_frames.back() {
                     Some(frame) => {
-                        match vision_controller::detect_target_objects(frame, &target) {
+                        match vision_controller::detect_target_objects(frame, &detail.detectable) {
                             Ok(objects) => {
                                 write_log_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerLogMessageType::Debug(format!("Detected objects: {}", &objects.len())));
                                 let shapes = vision_controller::detect_object_shape(&objects).unwrap();
                                 match vision_controller::measure_object_size_by_aruco(aruco, &objects) {
                                     Ok(measure_result) => {
                                         write_log_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerLogMessageType::Debug(format!("Measured objects: {:?}", &measure_result)));
-                                        let content_result = VisionContent::new(
-                                            VisionAction::ObjectDetectionWithAruco(target.clone()),
-                                            measure_result.iter().enumerate()
-                                                .map(|(i, object)| {
-                                                    Box::new(VisionObject::new(
-                                                        target.clone(),
-                                                        object.clone(),
-                                                        shapes.get(i).unwrap().clone(),
-                                                    )) as Box<dyn VisionSlot>
-                                                }).collect()
-                                        );
-                                        write_log_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerLogMessageType::Debug(format!("Content: {:?}", &content_result)));
-                                        Ok(content_result)
+                                        if detail.gaze_assist {
+                                            match self.previous_gaze_info.back() {
+                                                Some((x, y)) => {
+                                                    let gaze_as_pxf = vision_util::gaze_to_pxf(&(*x, *y), &(frame.cols(), frame.rows()));
+                                                    let gaze_assist_result = vision_controller::find_nearest_object_from_gaze(&gaze_as_pxf, &objects);
+                                                    match gaze_assist_result {
+                                                        Ok(result) => {
+                                                            let content_result = VisionContent::new(
+                                                                VisionAction::ObjectDetection(detail.clone()),
+                                                                vec![Box::new(VisionObject::new(
+                                                                    detail.detectable.clone(),
+                                                                    measure_result.get(result.0).unwrap().clone(),
+                                                                    shapes.get(result.0).unwrap().clone(),
+                                                                )) as Box<dyn VisionSlot>]
+                                                            );
+                                                            write_log_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerLogMessageType::Debug(format!("Content: {:?}", &content_result)));
+                                                            Ok(content_result)
+                                                        }
+                                                        Err(e) => {
+                                                            Err(anyhow!("failed to measure target objects: {}", e))
+                                                        }
+                                                    }
+                                                }
+                                                _ => {
+                                                    Err(anyhow!("failed to measure target objects: no gaze data"))
+                                                }
+                                            }
+                                        } else {
+                                            let content_result = VisionContent::new(
+                                                VisionAction::ObjectDetection(detail.clone()),
+                                                measure_result.iter().enumerate()
+                                                    .map(|(i, object)| {
+                                                        Box::new(VisionObject::new(
+                                                            detail.detectable.clone(),
+                                                            object.clone(),
+                                                            shapes.get(i).unwrap().clone(),
+                                                        )) as Box<dyn VisionSlot>
+                                                    }).collect()
+                                                );
+                                            write_log_message(&self.sender, SmartSpeakerActors::VisionActor, SmartSpeakerLogMessageType::Debug(format!("Content: {:?}", &content_result)));
+                                            Ok(content_result)
+                                        }
                                     }
                                     Err(_) => {
                                         Err(anyhow!("failed to measure target objects"))

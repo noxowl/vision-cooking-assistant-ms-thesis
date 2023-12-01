@@ -1,3 +1,4 @@
+use std::ops::Mul;
 use std::str::FromStr;
 use anyhow::{anyhow, Result};
 use opencv::core::{Point2f, in_range, Size, Point, bitwise_and, BORDER_DEFAULT, Vector, RotatedRect, Point_};
@@ -207,5 +208,15 @@ pub(crate) fn get_measure_criteria_from_aruco(aruco_corners: &VectorOfVectorOfPo
     Ok((width_ratios, height_ratios))
 }
 
+pub(crate) fn gaze_to_px(gaze: &(f32, f32), frame_size: &(i32, i32)) -> (i32, i32) {
+    let x = gaze.0.mul(frame_size.0 as f32) as i32;
+    let y = frame_size.1 - gaze.1.mul(frame_size.1 as f32) as i32;
+    (x, y)
+}
 
+pub(crate) fn gaze_to_pxf(gaze: &(f32, f32), frame_size: &(i32, i32)) -> (f32, f32) {
+    let x = gaze.0.mul(frame_size.0 as f32);
+    let y = frame_size.1 as f32 - gaze.1.mul(frame_size.1 as f32);
+    (x, y)
+}
 

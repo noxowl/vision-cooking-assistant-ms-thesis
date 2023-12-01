@@ -5,7 +5,7 @@ use serde_json::json;
 use crate::smart_speaker::models::intent_model::IntentCookingMenu;
 use crate::smart_speaker::models::step_model::generic_step::{ActionExecutable, ActionTriggerType};
 use crate::smart_speaker::models::task_model::{SmartSpeakerTaskResult, SmartSpeakerTaskResultCode};
-use crate::smart_speaker::models::vision_model::{DetectableObject, VisionAction, VisionObject};
+use crate::smart_speaker::models::vision_model::{DetectableObject, DetectionDetail, DetectionMode, VisionAction, VisionObject};
 use crate::smart_speaker::models::message_model::*;
 use crate::smart_speaker::models::revision_model::cooking_revision::{CookingRevision, CookingRevisionEntity, CookingRevisionEntityProperty};
 use crate::smart_speaker::models::revision_model::Revision;
@@ -400,11 +400,11 @@ impl VisionBasedIngredientMeasureAction {
 
         match self.detail {
             CookingActionDetail::MeasureIngredientSize => {
-                let largest = contents.iter().max_by(|a, b| a.size.perimeter.partial_cmp(&b.size.perimeter).unwrap()).unwrap();
-                match largest.object_type {
+                let first = contents.get(0).unwrap();
+                match first.object_type {
                     DetectableObject::Carrot => {
                         let target = self.ingredients.iter().find(|i| i.name == CookingIngredientName::Carrot).unwrap();
-                        let weight_approx = target.name.get_weight_per_perimeter(largest.size.perimeter);
+                        let weight_approx = target.name.get_weight_per_perimeter(first.size.perimeter);
                         let diff = weight_approx.sub(target.unit).unwrap();
                         if diff.get_value().is_sign_positive() {
                             revisions.push(CookingRevisionEntity::new(
@@ -503,7 +503,7 @@ impl ActionExecutable for VisionBasedIngredientMeasureAction {
                             self.tts_script.clone(),
                         ))
                     }
-                    VisionAction::ObjectDetectionWithAruco(detectable) => {
+                    VisionAction::ObjectDetection(detectable) => {
                         self.handle_vision_contents(
                             &content.entities.iter().map(|c| c.as_any().downcast_ref::<VisionObject>().unwrap().clone()).collect::<Vec<VisionObject>>())
                     }
@@ -638,7 +638,11 @@ impl CookingStepBuilder {
                 Box::new(VisionBasedIngredientMeasureAction::new(
                     vec![menu.to_ingredient().iter().find(|i| i.name == CookingIngredientName::Carrot).unwrap().clone()],
                     CookingActionDetail::MeasureIngredientSize,
-                    VisionAction::ObjectDetectionWithAruco(DetectableObject::Carrot),
+                    VisionAction::ObjectDetection(DetectionDetail::new(
+                        DetectionMode::Aruco,
+                        DetectableObject::Carrot,
+                        true,
+                    )),
                     SmartSpeakerI18nText::new()
                         .ko("{{measure_result}} 이후의 설명에 참고하도록 하겠습니다.")
                         .en("{{measure_result}} I'll keep that in mind for the rest of the instructions.")
@@ -686,7 +690,11 @@ impl CookingStepBuilder {
                         CookingIngredientName::Carrot,
                         CookingIngredientAmount::MilliGram(100))],
                     CookingActionDetail::MeasureIngredientSize,
-                    VisionAction::ObjectDetectionWithAruco(DetectableObject::Carrot),
+                    VisionAction::ObjectDetection(DetectionDetail::new(
+                        DetectionMode::Aruco,
+                        DetectableObject::Carrot,
+                        true,
+                    )),
                     SmartSpeakerI18nText::new()
                         .ko("{{measure_result}} 이후의 설명에 참고하도록 하겠습니다.")
                         .en("{{measure_result}} I'll keep that in mind for the rest of the instructions.")

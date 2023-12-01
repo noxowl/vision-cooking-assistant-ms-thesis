@@ -12,6 +12,7 @@ pub(crate) struct DebugData {
     pub frame: Option<Mat>,
     pub gaze_x: f32,
     pub gaze_y: f32,
+    pub gaze_as_px: (i32, i32),
     pub state: SmartSpeakerState,
 }
 
@@ -22,6 +23,7 @@ impl DebugData {
             frame: None,
             gaze_x: 0.,
             gaze_y: 0.,
+            gaze_as_px: (0, 0),
             state: SmartSpeakerState::Idle,
         }
     }
@@ -38,6 +40,7 @@ impl DebugData {
             Some(frame) => {
                 let mut display_frame: Mat = Default::default();
                 frame.copy_to(&mut display_frame).unwrap();
+                self.gaze_as_px = vision_util::gaze_to_px(&(self.gaze_x, self.gaze_y), &(frame.cols(), frame.rows()));
                 match &self.state {
                     SmartSpeakerState::Idle => {
                         debug_controller::write_text_to_mat(&mut display_frame, "Waiting for wake word...", 10, 40);
@@ -50,7 +53,7 @@ impl DebugData {
                     }
                 }
                 debug_controller::write_text_to_mat(&mut display_frame, &format!("Gaze: ({}, {})", self.gaze_x, self.gaze_y), 10, 20);
-                debug_controller::draw_circle_to_mat(&mut display_frame, self.gaze_x.mul(frame.cols() as f32) as i32, frame.rows() - self.gaze_y.mul(frame.rows() as f32) as i32);
+                debug_controller::draw_circle_to_mat(&mut display_frame, self.gaze_as_px.0, self.gaze_as_px.1);
 
                 // Begin debug for object detection
                 let (aruco_contours, aruco_index) = vision_controller::detect_aruco(frame).unwrap();
@@ -82,15 +85,37 @@ impl DebugData {
 
                         match vision_controller::measure_object_size_by_aruco(&aruco_contours, &objects) {
                             Ok(measure_result) => {
-                                for i in 0..measure_result.len() {
-                                    let rect = vision_util::get_min_rect2f(&objects.get(i).unwrap());
-                                    let object_size = measure_result.get(i).unwrap();
-                                    let shape_poly = vision_util::get_approx_poly_dp(&objects.get(i).unwrap().iter().map(|c| Point::new(c.x as i32, c.y as i32)).collect(), true);
+                                if measure_result.len() > 0 {
+                                    for i in 0..measure_result.len() {
+                                        let rect = vision_util::get_min_rect2f(&objects.get(i).unwrap());
+                                        let object_size = measure_result.get(i).unwrap();
+                                        let shape_poly = vision_util::get_approx_poly_dp(&objects.get(i).unwrap().iter().map(|c| Point::new(c.x as i32, c.y as i32)).collect(), true);
 
-                                    debug_controller::draw_rotated_rect_to_mat(&mut display_frame, &rect);
-                                    debug_controller::draw_approx_poly_to_mat(&mut display_frame, &objects.get(i).unwrap());
-                                    debug_controller::draw_approx_poly_to_mat(&mut display_frame, &shape_poly);
-                                    debug_controller::write_text_to_mat(&mut display_frame, &format!("Object: {:.1} cm^2 ({:.1}x{:.1}) cm\nShape: {}", object_size.perimeter, object_size.width, object_size.height, &shapes.get(i).unwrap().to_i18n().en), rect.center.x as i32, rect.center.y as i32 + 20 );
+                                        debug_controller::draw_rotated_rect_to_mat(&mut display_frame, &rect);
+                                        debug_controller::draw_approx_poly_to_mat(&mut display_frame, &objects.get(i).unwrap());
+                                        debug_controller::draw_approx_poly_to_mat(&mut display_frame, &shape_poly);
+                                        debug_controller::write_text_to_mat(&mut display_frame, &format!("Object: {:.1} cm^2 ({:.1}x{:.1}) cm\nShape: {}", object_size.perimeter, object_size.width, object_size.height, &shapes.get(i).unwrap().to_i18n().en), rect.center.x as i32, rect.center.y as i32 + 20 );
+                                    }
+                                    if aruco_index.len() > 0 {
+                                        let (width_ratios, height_ratios) = vision_util::get_measure_criteria_from_aruco(&aruco_contours).unwrap();
+                                        let ratios = width_ratios.iter().zip(height_ratios.iter()).map(|(a, b)| a * b).collect::<Vec<f32>>();
+                                        let gaze_as_pxf = vision_util::gaze_to_pxf(&(self.gaze_x, self.gaze_y), &(frame.cols(), frame.rows()));
+                                        let nearest_info = vision_controller::find_nearest_object_from_gaze(&(gaze_as_pxf.0, gaze_as_pxf.1), &objects).unwrap();
+                                        let mut distance_candidates = vec![];
+                                        for r in ratios {
+                                            distance_candidates.push(vision_util::pixel_to_metric(
+                                                nearest_info.1,
+                                                &r));
+                                        }
+                                        let distance_as_metric = distance_candidates.iter().sum::<f32>() / distance_candidates.len() as f32;
+                                        let rect = vision_util::get_min_rect2f(&objects.get(nearest_info.0).unwrap());
+                                        debug_controller::draw_line_to_mat(&mut display_frame, self.gaze_as_px.0, self.gaze_as_px.1, rect.center.x as i32, rect.center.y as i32);
+                                        debug_controller::draw_rotated_rect_to_mat(&mut display_frame, &rect);
+                                        debug_controller::write_text_to_mat(&mut display_frame, &format!("Nearest from gaze: {} cm", distance_as_metric), rect.center.x as i32, rect.center.y as i32 + 50 );
+
+
+
+                                    }
                                 }
                             }
                             Err(_) => {
