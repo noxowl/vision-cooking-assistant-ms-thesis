@@ -134,8 +134,8 @@ pub(crate) fn mask_object(frame: &Mat, target: DetectableObject) -> Result<Mat> 
         DetectableObject::Carrot => {
             in_range(
                 &hsv,
-                &Vector::from_slice(&[10., 100., 20.]),
-                &Vector::from_slice(&[25., 255., 255.]),
+                &Vector::from_slice(&[1., 100., 60.]),
+                &Vector::from_slice(&[20., 190., 190.]),
                 &mut mask,
             )?;
         },
