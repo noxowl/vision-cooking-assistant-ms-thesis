@@ -1,6 +1,6 @@
 use std::ops::Mul;
-use opencv::{prelude::*, highgui, core::Point2f};
-use opencv::core::Point;
+use opencv::{prelude::*, highgui, core::Point2f, imgproc};
+use opencv::core::{Point, Scalar};
 use crate::smart_speaker::controllers::vision_controller;
 use crate::smart_speaker::controllers::debug_controller;
 use crate::smart_speaker::models::core_model::{SmartSpeakerState, WaitingInteraction};
@@ -42,26 +42,25 @@ impl DebugData {
             SmartSpeakerState::Idle => {
                 // Black screen
                 display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::all(0.)).unwrap();
-                debug_controller::write_text_to_mat(&mut display_frame, "Waiting for Wake up...", 240, 320);
+                imgproc::put_text(&mut display_frame, "Waiting for Wake up...", Point::new(240, 320), 1, 1., Scalar::new(255., 255., 255., 255.), 1, 0, false).unwrap();
             }
             SmartSpeakerState::Attention => {
                 // Green Screen
                 display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::new(0., 255., 0., 255.)).unwrap();
-                debug_controller::write_text_to_mat(&mut display_frame, "Listening...", 240, 320);
+                imgproc::put_text(&mut display_frame, "Listening...", Point::new(240, 320), 1, 1., Scalar::new(0., 0., 0., 255.), 1, 0, false).unwrap();
             }
             SmartSpeakerState::WaitingForInteraction(pending_type) => {
                 // Yellow screen
                 match pending_type {
                     WaitingInteraction::Speak => {
                         display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::new(0., 255., 255., 255.)).unwrap();
-                        debug_controller::write_text_to_mat(&mut display_frame, "Wait for Speak...", 240, 320);
+                        imgproc::put_text(&mut display_frame, "Wait for Speak...", Point::new(240, 320), 1, 1., Scalar::new(0., 0., 0., 255.), 1, 0, false).unwrap();
                     }
                     WaitingInteraction::Vision(_) => {
                         display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::new(0., 255., 255., 255.)).unwrap();
-                        debug_controller::write_text_to_mat(&mut display_frame, "Wait for Vision...", 240, 320);
+                        imgproc::put_text(&mut display_frame, "Wait for Vision...", Point::new(240, 320), 1, 1., Scalar::new(0., 0., 0., 255.), 1, 0, false).unwrap();
                     }
                     _ => {
-
                     }
                 }
             }
