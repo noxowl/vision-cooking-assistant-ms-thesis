@@ -4,6 +4,7 @@ use opencv::core::{Point, Scalar};
 use crate::smart_speaker::controllers::vision_controller;
 use crate::smart_speaker::controllers::debug_controller;
 use crate::smart_speaker::models::core_model::{SmartSpeakerState, WaitingInteraction};
+use crate::smart_speaker::models::message_model::SmartSpeakerActors;
 use crate::smart_speaker::models::vision_model;
 use crate::utils::vision_util;
 
@@ -13,7 +14,7 @@ pub(crate) struct DebugData {
     pub gaze_x: f32,
     pub gaze_y: f32,
     pub gaze_as_px: (i32, i32),
-    pub state: SmartSpeakerState,
+    pub state: (SmartSpeakerState, SmartSpeakerActors),
 }
 
 impl DebugData {
@@ -24,7 +25,7 @@ impl DebugData {
             gaze_x: 0.,
             gaze_y: 0.,
             gaze_as_px: (0, 0),
-            state: SmartSpeakerState::Idle,
+            state: (SmartSpeakerState::Idle, SmartSpeakerActors::CoreActor),
         }
     }
 
@@ -38,7 +39,7 @@ impl DebugData {
     pub(crate) fn indicator_loop(&self) {
         // Force to create a frame to display (for TTS callback)
         let mut display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::all(0.)).unwrap();
-        match &self.state {
+        match &self.state.0 {
             SmartSpeakerState::Idle => {
                 // Black screen
                 display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::all(0.)).unwrap();
@@ -46,8 +47,18 @@ impl DebugData {
             }
             SmartSpeakerState::Attention => {
                 // Green Screen
-                display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::new(0., 255., 0., 255.)).unwrap();
-                imgproc::put_text(&mut display_frame, "Listening...", Point::new(240, 320), 1, 1., Scalar::new(0., 0., 0., 255.), 1, 0, false).unwrap();
+                match &self.state.1 {
+                    SmartSpeakerActors::SpeechToIntentActor => {
+                        display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::new(0., 255., 0., 255.)).unwrap();
+                        imgproc::put_text(&mut display_frame, "Listening...", Point::new(240, 320), 1, 1., Scalar::new(0., 0., 0., 255.), 1, 0, false).unwrap();
+                    }
+                    SmartSpeakerActors::VoiceActivityDetectActor => {
+                        display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::all(0.)).unwrap();
+                        imgproc::put_text(&mut display_frame, "Waiting for Voice Activity...", Point::new(240, 320), 1, 1., Scalar::new(255., 255., 255., 255.), 1, 0, false).unwrap();
+                    }
+                    _ => {}
+                }
+
             }
             SmartSpeakerState::WaitingForInteraction(pending_type) => {
                 // Yellow screen
@@ -76,7 +87,7 @@ impl DebugData {
                 let mut display_frame: Mat = Default::default();
                 frame.copy_to(&mut display_frame).unwrap();
                 self.gaze_as_px = vision_util::gaze_to_px(&(self.gaze_x, self.gaze_y), &(frame.cols(), frame.rows()));
-                match &self.state {
+                match &self.state.0 {
                     SmartSpeakerState::Idle => {
                         debug_controller::write_text_to_mat(&mut display_frame, "Waiting for wake word...", 10, 40);
                     }
@@ -200,7 +211,7 @@ impl DebugData {
     //         );
     // }
 
-    pub(crate) fn update_state(&mut self, state: SmartSpeakerState) {
-        self.state = state;
+    pub(crate) fn update_state(&mut self, state: SmartSpeakerState, actor: SmartSpeakerActors) {
+        self.state = (state, actor);
     }
 }

@@ -281,7 +281,7 @@ impl CoreActorMessageHandler {
                                   SmartSpeakerLogMessageType::Debug(
                                       format!("RequestStateUpdate from {:?} to {:?}", &send_from, &state).to_string()));
                 if self.debug.activated {
-                    self.debug.update_state(state.clone());
+                    self.debug.update_state(state.clone(), SmartSpeakerActors::CoreActor);
                 }
                 match send_from {
                     SmartSpeakerActors::WakeWordActor => {
@@ -294,6 +294,9 @@ impl CoreActorMessageHandler {
                         }
                     },
                     SmartSpeakerActors::VoiceActivityDetectActor => {
+                        if self.debug.activated {
+                            self.debug.update_state(state.clone(), SmartSpeakerActors::SpeechToIntentActor);
+                        }
                         if senders.get(&SmartSpeakerActors::SpeechToIntentActor).is_none() {
                             return CoreActorState::NewActorRequested {
                                 actor: SmartSpeakerActors::SpeechToIntentActor,
@@ -314,6 +317,9 @@ impl CoreActorMessageHandler {
                             SmartSpeakerState::WaitingForInteraction(pending_type) => {
                                 match pending_type {
                                     WaitingInteraction::Speak => {
+                                        if self.debug.activated {
+                                            self.debug.update_state(state.clone(), SmartSpeakerActors::VoiceActivityDetectActor);
+                                        }
                                         if senders.get(&SmartSpeakerActors::VoiceActivityDetectActor).is_none() {
                                             return CoreActorState::NewActorRequested {
                                                 actor: SmartSpeakerActors::VoiceActivityDetectActor,
