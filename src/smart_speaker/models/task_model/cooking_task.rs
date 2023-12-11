@@ -435,10 +435,10 @@ impl CookingIngredientName {
         // Returns the value in 25g increments with a margin of error.
         match self {
             CookingIngredientName::Carrot => {
-                let criteria = (50.0, 1000);
-                let adjusted_perimeter = perimeter * 1.1;
+                let criteria = (60.0, 1000);
+                let adjusted_perimeter = perimeter * 1.05;
                 let calculated_weight = (adjusted_perimeter / criteria.0) * criteria.1 as f32;
-                let weight_with_error = calculated_weight * 0.9;
+                let weight_with_error = calculated_weight * 0.95;
 
                 let rounded_weight = if perimeter >= 50.0 {
                     ((weight_with_error / 25.0).round()) as i32 * 25
