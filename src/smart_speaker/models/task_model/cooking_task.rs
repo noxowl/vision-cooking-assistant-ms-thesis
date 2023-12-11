@@ -586,15 +586,15 @@ impl CookingIngredientAmount {
             CookingIngredientAmount::Tbsp(amount) => {
                 SmartSpeakerI18nText::new()
                     .en(&format!("{} tablespoon", amount.to_i18n().en))
-                    .ja(&format!("{}大さじ", amount.to_i18n().ja))
-                    .zh(&format!("{}大勺", amount.to_i18n().zh))
+                    .ja(&format!("大さじ{}", amount.to_i18n().ja))
+                    .zh(&format!("大勺{}", amount.to_i18n().zh))
                     .ko(&format!("{}큰술", amount.to_i18n().ko))
             }
             CookingIngredientAmount::Tsp(amount) => {
                 SmartSpeakerI18nText::new()
                     .en(&format!("{} teaspoon", amount.to_i18n().en))
-                    .ja(&format!("{}小さじ", amount.to_i18n().ja))
-                    .zh(&format!("{}小勺", amount.to_i18n().zh))
+                    .ja(&format!("小さじ{}", amount.to_i18n().ja))
+                    .zh(&format!("小勺{}", amount.to_i18n().zh))
                     .ko(&format!("{}작은술", amount.to_i18n().ko))
             }
             CookingIngredientAmount::Cup(amount) => {
