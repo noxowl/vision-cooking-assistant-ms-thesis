@@ -468,7 +468,7 @@ impl VisionBasedIngredientMeasureAction {
         return Ok(SmartSpeakerTaskResult::with_tts_and_revision(
             self.get_action_trigger_type().to_task_type(),
             SmartSpeakerTaskResultCode::StepSuccess,
-            self.tts_script.clone(),
+            tts_script.clone(),
             Box::new(CookingRevision::new(revisions)),
         ))
     }
