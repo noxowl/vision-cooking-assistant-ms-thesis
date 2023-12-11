@@ -71,6 +71,7 @@ impl DebugData {
     }
 
     pub(crate) fn print(&mut self) {
+        let verbose = false;
         match &self.frame {
             Some(frame) => {
                 let mut display_frame: Mat = Default::default();
@@ -96,20 +97,22 @@ impl DebugData {
 
                 // For ArUco debug print
                 debug_controller::draw_aruco(&mut display_frame, &aruco_contours, &aruco_index);
-                for i in 0..aruco_contours.len() {
-                    let square = vision_util::get_min_rect2f(&aruco_contours.get(i).unwrap());
-                    let mut points = [Point2f::default(); 4];
-                    square.points(&mut points).unwrap();
-                    let width = vision_util::distance(&points[1].x, &points[1].y, &points[2].x, &points[2].y);
-                    let height = vision_util::distance(&points[0].x, &points[0].y, &points[1].x, &points[1].y);
-                    let points_width = vision_util::pixel_to_metric(
-                        width,
-                        &width_ratios.get(i).unwrap());
-                    let points_height = vision_util::pixel_to_metric(
-                        height,
-                        &height_ratios.get(i).unwrap());
-                    debug_controller::write_text_to_mat(&mut display_frame, &format!("{}: ({:.1}x{:.1}) cm", aruco_index.get(i).unwrap() as u32, points_width, points_height), square.center.x as i32, square.center.y as i32 + 20 );
-                }
+                if verbose {
+                    for i in 0..aruco_contours.len() {
+                        let square = vision_util::get_min_rect2f(&aruco_contours.get(i).unwrap());
+                        let mut points = [Point2f::default(); 4];
+                        square.points(&mut points).unwrap();
+                        let width = vision_util::distance(&points[1].x, &points[1].y, &points[2].x, &points[2].y);
+                        let height = vision_util::distance(&points[0].x, &points[0].y, &points[1].x, &points[1].y);
+                        let points_width = vision_util::pixel_to_metric(
+                            width,
+                            &width_ratios.get(i).unwrap());
+                        let points_height = vision_util::pixel_to_metric(
+                            height,
+                            &height_ratios.get(i).unwrap());
+                        debug_controller::write_text_to_mat(&mut display_frame, &format!("{}: ({:.1}x{:.1}) cm", aruco_index.get(i).unwrap() as u32, points_width, points_height), square.center.x as i32, square.center.y as i32 + 20 );
+                    }
+
 
                 // For object detection debug print
                 let masked = vision_util::mask_object(frame, vision_model::DetectableObject::Carrot).unwrap();
@@ -159,6 +162,7 @@ impl DebugData {
                     }
                     Err(_) => {
                     }
+                }
                 }
 
                 highgui::imshow("Debug Screen", &display_frame).unwrap();
