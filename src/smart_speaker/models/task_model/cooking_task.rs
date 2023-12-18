@@ -68,7 +68,10 @@ impl CookingIngredientTime {
         let minutes = self.time / 10;
         let remaining_seconds = (self.time % 10) * 6; // Convert to seconds, each unit is 6 seconds
 
-        let rounded_seconds = 10 + ((remaining_seconds + 4) / 10) * 10; // Round to the nearest 10 seconds
+        let mut rounded_seconds = 0;
+        if remaining_seconds > 0 {
+            rounded_seconds = 10 + ((remaining_seconds + 4) / 10) * 10; // Round to the nearest 10 seconds
+        }
 
         if rounded_seconds > 0 {
             SmartSpeakerI18nText::new()
@@ -586,14 +589,14 @@ impl CookingIngredientAmount {
             CookingIngredientAmount::Tbsp(amount) => {
                 SmartSpeakerI18nText::new()
                     .en(&format!("{} tablespoon", amount.to_i18n().en))
-                    .ja(&format!("大さじ{}", amount.to_i18n().ja))
+                    .ja(&format!("おおさじ{}", amount.to_i18n().ja))
                     .zh(&format!("大勺{}", amount.to_i18n().zh))
                     .ko(&format!("{}큰술", amount.to_i18n().ko))
             }
             CookingIngredientAmount::Tsp(amount) => {
                 SmartSpeakerI18nText::new()
                     .en(&format!("{} teaspoon", amount.to_i18n().en))
-                    .ja(&format!("小さじ{}", amount.to_i18n().ja))
+                    .ja(&format!("こさじ{}", amount.to_i18n().ja))
                     .zh(&format!("小勺{}", amount.to_i18n().zh))
                     .ko(&format!("{}작은술", amount.to_i18n().ko))
             }

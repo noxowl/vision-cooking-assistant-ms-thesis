@@ -73,7 +73,7 @@ impl ActionExecutable for ExplainRecipeAction {
                                 } else {
                                     format!("{}", i.name.to_i18n().en)
                                 }
-                            }).collect::<Vec<String>>().join(". ")
+                            }).collect::<Vec<String>>().join(".   .")
                         })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                         tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
                             "additional_explain": self.ingredients.iter()
@@ -83,7 +83,7 @@ impl ActionExecutable for ExplainRecipeAction {
                                 } else {
                                     format!("{}", i.name.to_i18n().ja)
                                 }
-                            }).collect::<Vec<String>>().join("、")
+                            }).collect::<Vec<String>>().join("、　　　、")
                         })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                         tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
                             "additional_explain": self.ingredients.iter()
@@ -93,7 +93,7 @@ impl ActionExecutable for ExplainRecipeAction {
                                 } else {
                                     format!("{}", i.name.to_i18n().zh)
                                 }
-                            }).collect::<Vec<String>>().join("、")
+                            }).collect::<Vec<String>>().join("、　　　、")
                         })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                         tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
                             "additional_explain": self.ingredients.iter()
@@ -103,7 +103,7 @@ impl ActionExecutable for ExplainRecipeAction {
                                 } else {
                                     format!("{}", i.name.to_i18n().ko)
                                 }
-                            }).collect::<Vec<String>>().join(". ")
+                            }).collect::<Vec<String>>().join(".   .")
                         })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                     }
                     CookingActionDetail::ExplainMutableIngredient(link) => {
@@ -715,8 +715,8 @@ impl CookingStepBuilder {
                 SmartSpeakerI18nText::new() // replace to template!
                     .ko("손질한 당근을 끓는 물에 약 {{time}}간 삶아주세요.")
                     .en("Boil the carrots in boiling water for about {{time}}.")
-                    .ja("人参を沸いた水に約{{time}}間茹でます。")
-                    .zh("把胡萝卜放在沸水里煮约{{time}}钟。")
+                    .ja("人参を沸いた水に、。。。約、。。。{{time}}間、。。。茹でます。")
+                    .zh("把胡萝卜放在沸水里煮、。。。约、。。。{{time}}钟。")
             )));
         steps.push(
             Box::new(ExplainRecipeAction::new(
@@ -727,10 +727,10 @@ impl CookingStepBuilder {
                         menu.to_ingredient().iter().filter(|ing| matches!(ing.name, CookingIngredientName::Salt|CookingIngredientName::Pepper|CookingIngredientName::SesameOil)).map(|ing| ing.clone()).collect::<Vec<CookingIngredient>>()
                     )),
                 SmartSpeakerI18nText::new()
-                    .ko("삶은 당근을 보울에 담아 소금 {{salt}}, 후추 {{pepper}}, 참기름 {{sesame_oil}}을 넣고 섞어주세요.")
-                    .en("Put the boiled carrots in a bowl and add {{salt}} of salt, {{pepper}} of pepper, and {{sesame_oil}} of sesame oil.")
-                    .ja("茹でた人参をボウルに入れて塩{{salt}}、コショウ{{pepper}}、ごま油{{sesame_oil}}を入れて混ぜます。")
-                    .zh("把煮好的胡萝卜放在碗里，加{{salt}}的盐，{{pepper}}的胡椒粉，{{sesame_oil}}的芝麻油。")
+                    .ko("삶은 당근을 보울에 담아 소금 {{salt}},    후추 {{pepper}},    참기름 {{sesame_oil}}을 넣고 섞어주세요.")
+                    .en("Put the boiled carrots in a bowl and add {{salt}} of salt,    {{pepper}} of pepper,    and {{sesame_oil}} of sesame oil.")
+                    .ja("茹でた人参をボウルに入れて塩　{{salt}}、　　　コショウ　{{pepper}}、　　　ごま油　{{sesame_oil}}　　　を入れて混ぜます。")
+                    .zh("把煮好的胡萝卜放在碗里，加{{salt}}的盐，   {{pepper}}的胡椒粉，   {{sesame_oil}}的芝麻油。")
             )));
         steps.push(
             Box::new(ExplainRecipeAction::new(

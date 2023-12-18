@@ -56,9 +56,43 @@ impl MachineSpeech {
 
     pub(crate) fn speak_with_callback(&mut self, i18n_text: SmartSpeakerI18nText, callback_sender: mpsc::Sender<usize>) {
         let Features {
+            rate,
             utterance_callbacks,
             ..
         } = self.app.supported_features();
+        if rate {
+            let normal_rate = self.app.normal_rate();
+            match &self.language {
+                LanguageTag::English => {
+                    if &i18n_text.en.chars().count() > &100 {
+                        self.app.set_rate(normal_rate - 0.1).unwrap();
+                    } else {
+                        self.app.set_rate(normal_rate).unwrap();
+                    }
+                }
+                LanguageTag::Japanese => {
+                    if &i18n_text.ja.chars().count() > &60 {
+                        self.app.set_rate(normal_rate - 0.1).unwrap();
+                    } else {
+                        self.app.set_rate(normal_rate).unwrap();
+                    }
+                }
+                LanguageTag::Chinese => {
+                    if &i18n_text.zh.chars().count() > &50 {
+                        self.app.set_rate(normal_rate - 0.1).unwrap();
+                    } else {
+                        self.app.set_rate(normal_rate).unwrap();
+                    }
+                }
+                LanguageTag::Korean => {
+                    if &i18n_text.ko.chars().count() > &60 {
+                        self.app.set_rate(normal_rate - 0.1).unwrap();
+                    } else {
+                        self.app.set_rate(normal_rate).unwrap();
+                    }
+                }
+            }
+        }
         let _ = self.app.speak(i18n_text.get(&self.language), false);
         if utterance_callbacks {
             self.app.on_utterance_end(Some(Box::new(move |utterance_id: UtteranceId| {
