@@ -257,6 +257,7 @@ pub(crate) enum CookingIngredientName {
     Mirin,
     Carrot,
     Onion,
+    Potato,
 }
 
 impl CookingIngredientName {
@@ -339,6 +340,13 @@ impl CookingIngredientName {
                     .zh("洋葱")
                     .ko("양파")
             }
+            CookingIngredientName::Potato => {
+                SmartSpeakerI18nText::new()
+                    .en("potato")
+                    .ja("じゃがいも")
+                    .zh("土豆")
+                    .ko("감자")
+            }
         }
     }
 
@@ -376,6 +384,9 @@ impl CookingIngredientName {
             }
             CookingIngredientName::Onion => {
                 "onion".to_string()
+            }
+            CookingIngredientName::Potato => {
+                "potato".to_string()
             }
         }
     }
@@ -415,6 +426,9 @@ impl CookingIngredientName {
             CookingIngredientName::Onion => {
                 SmartSpeakerMaterialProperty::Solid
             }
+            CookingIngredientName::Potato => {
+                SmartSpeakerMaterialProperty::Solid
+            }
         }
     }
 
@@ -425,6 +439,9 @@ impl CookingIngredientName {
             }
             CookingIngredientName::Onion => {
                 (2000, 3000)
+            }
+            CookingIngredientName::Potato => {
+                (700, 3000)
             }
             _ => {
                 (0, 0)

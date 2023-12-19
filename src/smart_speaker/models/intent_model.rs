@@ -57,6 +57,7 @@ impl FromStr for IntentPlace {
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub(crate) enum IntentCookingMenu {
     CarrotSalad,
+    PotatoSalad,
 }
 
 impl IntentCookingMenu {
@@ -66,7 +67,12 @@ impl IntentCookingMenu {
                 .en("Carrot salad")
                 .ja("にんじんサラダ")
                 .zh("胡萝卜沙拉")
-                .ko("당근 샐러드")
+                .ko("당근 샐러드"),
+            IntentCookingMenu::PotatoSalad => SmartSpeakerI18nText::new()
+                .en("Potato salad")
+                .ja("ポテトサラダ")
+                .zh("土豆沙拉")
+                .ko("감자 샐러드")
         }
     }
 
@@ -76,6 +82,20 @@ impl IntentCookingMenu {
                 CookingIngredient::new(
                     CookingIngredientName::Carrot,
                     CookingIngredientAmount::MilliGram(1000)),
+                CookingIngredient::new(
+                    CookingIngredientName::Salt,
+                    CookingIngredientAmount::MilliGram(50)),
+                CookingIngredient::new(
+                    CookingIngredientName::Pepper,
+                    CookingIngredientAmount::MilliGram(50)),
+                CookingIngredient::new(
+                    CookingIngredientName::SesameOil,
+                    CookingIngredientAmount::MilliLiter(5)),
+            ],
+            IntentCookingMenu::PotatoSalad => vec![
+                CookingIngredient::new(
+                    CookingIngredientName::Potato,
+                    CookingIngredientAmount::MilliGram(1500)),
                 CookingIngredient::new(
                     CookingIngredientName::Salt,
                     CookingIngredientAmount::MilliGram(50)),
@@ -109,6 +129,17 @@ impl FromStr for IntentCookingMenu {
             "人参サラダ" => Ok(IntentCookingMenu::CarrotSalad),
             "にんじんのサラダ" => Ok(IntentCookingMenu::CarrotSalad),
             "にんじんりようり" => Ok(IntentCookingMenu::CarrotSalad),
+            "にんじんのほっとさらだ" => Ok(IntentCookingMenu::CarrotSalad),
+            "にんじんほっとさらだ" => Ok(IntentCookingMenu::CarrotSalad),
+            "にんじんサラダりようり" => Ok(IntentCookingMenu::CarrotSalad),
+            "ポテトサラダ" => Ok(IntentCookingMenu::PotatoSalad),
+            "ポテトのサラダ" => Ok(IntentCookingMenu::PotatoSalad),
+            "ポテトりようり" => Ok(IntentCookingMenu::PotatoSalad),
+            "ポテトのほっとサラダ" => Ok(IntentCookingMenu::PotatoSalad),
+            "ポテトほっとサラダ" => Ok(IntentCookingMenu::PotatoSalad),
+            "ぽてとサラダ" => Ok(IntentCookingMenu::PotatoSalad),
+            "ポテトサラダりようり" => Ok(IntentCookingMenu::PotatoSalad),
+            "ぽてとさらだりようり" => Ok(IntentCookingMenu::PotatoSalad),
             _ => Err(()),
         }
     }
@@ -118,6 +149,7 @@ impl Display for IntentCookingMenu {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         match self {
             IntentCookingMenu::CarrotSalad => write!(f, "にんじんサラダ"),
+            IntentCookingMenu::PotatoSalad => write!(f, "ポテトサラダ"),
         }
     }
 }

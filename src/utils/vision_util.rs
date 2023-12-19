@@ -139,6 +139,14 @@ pub(crate) fn mask_object(frame: &Mat, target: DetectableObject) -> Result<Mat> 
                 &mut mask,
             )?;
         },
+        DetectableObject::Potato => {
+            in_range(
+                &hsv,
+                &Vector::from_slice(&[0., 0., 0.]),
+                &Vector::from_slice(&[20., 255., 255.]),
+                &mut mask,
+            )?;
+        },
         DetectableObject::HumanSkin => {
             in_range(
                 &hsv,

@@ -49,6 +49,9 @@ pub(crate) fn detect_target_objects(frame: &Mat, target: &DetectableObject) -> R
         DetectableObject::Carrot => {
             object_mask = vision_util::mask_object(&frame, DetectableObject::Carrot).unwrap();
         }
+        DetectableObject::Potato => {
+            object_mask = vision_util::mask_object(&frame, DetectableObject::Potato).unwrap();
+        }
         DetectableObject::HumanSkin => {
             object_mask = vision_util::mask_object(&frame, DetectableObject::HumanSkin).unwrap();
         }

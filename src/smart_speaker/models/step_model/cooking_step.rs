@@ -579,28 +579,7 @@ impl CookingStepBuilder {
         }
     }
 
-    pub(crate) fn build(&self, menu: IntentCookingMenu) -> Vec<Box<dyn ActionExecutable>> {
-        let mut steps: Vec<Box<dyn ActionExecutable>> = vec![];
-        steps.push(
-            Box::new(ExplainRecipeAction::new(
-                vec![],
-                CookingActionDetail::None,
-                SmartSpeakerI18nText::new()
-                    .ko(&format!("{} 요리를 시작합니다. 준비가 되면 '오케이' 또는 '다음' 과 같은 대답으로 알려주세요.", menu.to_i18n().ko))
-                    .en(&format!("Let's start {} cooking. Let me know when you are ready with a response like 'okay' or 'next'.", menu.to_i18n().en))
-                    .ja(&format!("{}料理を始めます。準備ができたら「オッケー」や「次」などで教えてください。", menu.to_i18n().ja))
-                    .zh(&format!("让我们开始{}烹饪。准备好后，请用“好”或“下一个”之类的回答告诉我。", menu.to_i18n().zh))
-            )));
-        steps.push(
-            Box::new(ExplainRecipeAction::new(
-                menu.to_ingredient(),
-                CookingActionDetail::ExplainNonMutableIngredient,
-                SmartSpeakerI18nText::new()
-                    .ko("요리 재료 설명을 시작합니다. {{additional_explain}} 가 필요합니다. 다음으로 넘어갈 준비가 되었으면 알려주세요. 다시 한 번 들으시려면 '다시 알려 줘' 라고 말씀해주세요.")
-                    .en("Let's start explaining ingredients. {{additional_explain}} is required. Let me know when you are ready to proceed. If you want to hear it again, please say 'tell me again'.")
-                    .ja("食材の説明を始めます。{{additional_explain}} が必要です。次に進む準備ができたら教えてください。もう一度聞きたい場合は、「もう一度教えて」と言ってください。")
-                    .zh("让我们开始解释食材。{{additional_explain}} 是必需的。准备好后请告诉我。如果你想再听一遍，请说“再告诉我一遍”。")
-            )));
+    fn build_carrot_salad(&self, menu: &IntentCookingMenu, steps: &mut Vec<Box<dyn ActionExecutable>>) {
         steps.push(
             Box::new(ExplainRecipeAction::new(
                 vec![],
@@ -708,11 +687,11 @@ impl CookingStepBuilder {
                 vec![menu.to_ingredient().iter().find(|i| i.name == CookingIngredientName::Carrot).unwrap().clone()],
                 CookingActionDetail::ExplainMutableTime(
                     CookingIngredientTime::new(
-                    CookingIngredient::new(
-                        CookingIngredientName::Carrot,
-                        CookingIngredientAmount::MilliGram(100)),
-                    100)),
-                SmartSpeakerI18nText::new() // replace to template!
+                        CookingIngredient::new(
+                            CookingIngredientName::Carrot,
+                            CookingIngredientAmount::MilliGram(100)),
+                        100)),
+                SmartSpeakerI18nText::new()
                     .ko("손질한 당근을 끓는 물에 약 {{time}}간 삶아주세요.")
                     .en("Boil the carrots in boiling water for about {{time}}.")
                     .ja("人参を沸いた水に、。。。約、。。。{{time}}間、。。。茹でます。")
@@ -732,6 +711,173 @@ impl CookingStepBuilder {
                     .ja("茹でた人参をボウルに入れて塩　{{salt}}、　　　コショウ　{{pepper}}、　　　ごま油　{{sesame_oil}}　　　を入れて混ぜます。")
                     .zh("把煮好的胡萝卜放在碗里，加{{salt}}的盐，   {{pepper}}的胡椒粉，   {{sesame_oil}}的芝麻油。")
             )));
+    }
+
+    fn build_potato_salad(&self, menu: &IntentCookingMenu, steps: &mut Vec<Box<dyn ActionExecutable>>) {
+        steps.push(
+            Box::new(ExplainRecipeAction::new(
+                vec![],
+                CookingActionDetail::None,
+                SmartSpeakerI18nText::new()
+                    .ko("먼저 감자를 준비합니다.")
+                    .en("First, prepare the potatoes.")
+                    .ja("まずじゃがいもを用意します。")
+                    .zh("首先准备土豆。")
+            )));
+        if self.vision {
+            steps.push(
+                Box::new(ExplainRecipeAction::new(
+                    vec![],
+                    CookingActionDetail::None,
+                    SmartSpeakerI18nText::new()
+                        .ko("도마 위에 감자가 준비되었다면, 저도 볼 수 있게 손을 치워주실 수 있나요? 준비가 되면 알려주세요.")
+                        .en("If the potatoes are ready on the chopping board, can you move your hands back so that I can see? Let me know when you are ready.")
+                        .ja("まな板の上にじゃがいもが用意できたら、私にも見えるように手をどけてくれますか？ 準備ができたら教えてください。")
+                        .zh("如果土豆准备好了，你能把手拿开让我看看吗？ 准备好后请告诉我。")
+                ))
+            );
+            steps.push(
+                Box::new(ExplainRecipeAction::new(
+                    vec![],
+                    CookingActionDetail::None,
+                    SmartSpeakerI18nText::new()
+                        .ko("감사합니다.")
+                        .en("Thank you.")
+                        .ja("ありがとうございます。")
+                        .zh("谢谢。")
+                ))
+            );
+            steps.push(
+                Box::new(VisionBasedIngredientMeasureAction::new(
+                    vec![menu.to_ingredient().iter().find(|i| i.name == CookingIngredientName::Potato).unwrap().clone()],
+                    CookingActionDetail::MeasureIngredientSize,
+                    VisionAction::ObjectDetection(DetectionDetail::new(
+                        DetectionMode::Aruco,
+                        DetectableObject::Potato,
+                        true,
+                    )),
+                    SmartSpeakerI18nText::new()
+                        .ko("{{measure_result}} 이후의 설명에 참고하도록 하겠습니다.")
+                        .en("{{measure_result}} I'll keep that in mind for the rest of the instructions.")
+                        .ja("{{measure_result}} 残りの説明のために覚えておきます。")
+                        .zh("{{measure_result}} 我会记住剩下的说明。")
+                ))
+            );
+        }
+        steps.push(
+            Box::new(ExplainRecipeAction::new(
+                vec![],
+                CookingActionDetail::None,
+                SmartSpeakerI18nText::new()
+                    .ko("계속해서 감자를 먹기 좋은 크기로 썰어주세요.")
+                    .en("Please continue to cut the potatoes into bite-sized pieces.")
+                    .ja("続いて、じゃがいもを食べやすい大きさに切ってください。")
+                    .zh("请继续把土豆切成一口大小。")
+            )));
+        if self.vision {
+            steps.push(
+                Box::new(ExplainRecipeAction::new(
+                    vec![],
+                    CookingActionDetail::None,
+                    SmartSpeakerI18nText::new()
+                        .ko("감자를 어떻게 자르셨는지 저도 볼 수 있게 한 조각만 보여주실 수 있나요? 준비가 되면 알려주세요.")
+                        .en("Can you show me just one piece of potato so that I can see how you cut it? Let me know when you are ready.")
+                        .ja("じゃがいもをどのように切ったか、私にも見せてくれますか？ 準備ができたら教えてください。")
+                        .zh("你能给我看一块土豆吗，这样我就能看到你是怎么切的了。 准备好后请告诉我。")
+                ))
+            );
+            steps.push(
+                Box::new(ExplainRecipeAction::new(
+                    vec![],
+                    CookingActionDetail::None,
+                    SmartSpeakerI18nText::new()
+                        .ko("감사합니다.")
+                        .en("Thank you.")
+                        .ja("ありがとうございます。")
+                        .zh("谢谢。")
+                ))
+            );
+            steps.push(
+                Box::new(VisionBasedIngredientMeasureAction::new(
+                    vec![CookingIngredient::new(
+                        CookingIngredientName::Potato,
+                        CookingIngredientAmount::MilliGram(100))],
+                    CookingActionDetail::MeasureIngredientSize,
+                    VisionAction::ObjectDetection(DetectionDetail::new(
+                        DetectionMode ::Aruco,
+                        DetectableObject::Potato,
+                        true,
+                    )),
+                    SmartSpeakerI18nText::new()
+                        .ko("{{measure_result}} 이후의 설명에 참고하도록 하겠습니다.")
+                        .en("{{measure_result}} I'll keep that in mind for the rest of the instructions.")
+                        .ja("{{measure_result}} 残りの説明のために覚えておきます。")
+                        .zh("{{measure_result}} 我会记住剩下的说明。")
+                ))
+            );
+        }
+        steps.push(
+            Box::new(ExplainRecipeAction::new(
+                vec![menu.to_ingredient().iter().find(|i| i.name == CookingIngredientName::Potato).unwrap().clone()],
+                CookingActionDetail::ExplainMutableTime(
+                    CookingIngredientTime::new(
+                        CookingIngredient::new(
+                            CookingIngredientName::Potato,
+                            CookingIngredientAmount::MilliGram(100)),
+                        100)),
+                SmartSpeakerI18nText::new()
+                    .ko("손질한 감자를 끓는 물에 약 {{time}}간 삶아주세요.")
+                    .en("Boil the potatoes in boiling water for about {{time}}.")
+                    .ja("じゃがいもを沸いた水に、。。。約、。。。{{time}}間、。。。茹でます。")
+                    .zh("把土豆放在沸水里煮、。。。约、。。。{{time}}钟。")
+            )));
+        steps.push(
+            Box::new(ExplainRecipeAction::new(
+                menu.to_ingredient(),
+                CookingActionDetail::ExplainMutableIngredient(
+                    CookingIngredientLinkComponent::new(
+                        menu.to_ingredient().iter().find(|i| i.name == CookingIngredientName::Potato).unwrap().clone(),
+                        menu.to_ingredient().iter().filter(|ing| matches!(ing.name, CookingIngredientName::Salt|CookingIngredientName::Pepper|CookingIngredientName::SesameOil)).map(|ing| ing.clone()).collect::<Vec<CookingIngredient>>()
+                    )),
+                SmartSpeakerI18nText::new()
+                    .ko("삶은 감자를 보울에 담아 소금 {{salt}},    후추 {{pepper}},    참기름 {{sesame_oil}}을 넣고 섞어주세요.")
+                    .en("Put the boiled potatoes in a bowl and add {{salt}} of salt,    {{pepper}} of pepper,    and {{sesame_oil}} of sesame oil.")
+                    .ja("茹でたじゃがいもをボウルに入れて塩　{{salt}}、　　　コショウ　{{pepper}}、　　　ごま油　{{sesame_oil}}　　　を入れて混ぜます。")
+                    .zh("把煮好的土豆放在碗里，加{{salt}}的盐，   {{pepper}}的胡椒粉，   {{sesame_oil}}的芝麻油。")
+            )));
+    }
+
+    pub(crate) fn build(&self, menu: IntentCookingMenu) -> Vec<Box<dyn ActionExecutable>> {
+        let mut steps: Vec<Box<dyn ActionExecutable>> = vec![];
+        steps.push(
+            Box::new(ExplainRecipeAction::new(
+                vec![],
+                CookingActionDetail::None,
+                SmartSpeakerI18nText::new()
+                    .ko(&format!("{} 요리를 시작합니다. 준비가 되면 '오케이' 또는 '다음' 과 같은 대답으로 알려주세요.", menu.to_i18n().ko))
+                    .en(&format!("Let's start {} cooking. Let me know when you are ready with a response like 'okay' or 'next'.", menu.to_i18n().en))
+                    .ja(&format!("{}料理を始めます。準備ができたら「オッケー」や「次」などで教えてください。", menu.to_i18n().ja))
+                    .zh(&format!("让我们开始{}烹饪。准备好后，请用“好”或“下一个”之类的回答告诉我。", menu.to_i18n().zh))
+            )));
+        steps.push(
+            Box::new(ExplainRecipeAction::new(
+                menu.to_ingredient(),
+                CookingActionDetail::ExplainNonMutableIngredient,
+                SmartSpeakerI18nText::new()
+                    .ko("요리 재료 설명을 시작합니다. {{additional_explain}} 가 필요합니다. 다음으로 넘어갈 준비가 되었으면 알려주세요. 다시 한 번 들으시려면 '다시 알려 줘' 라고 말씀해주세요.")
+                    .en("Let's start explaining ingredients. {{additional_explain}} is required. Let me know when you are ready to proceed. If you want to hear it again, please say 'tell me again'.")
+                    .ja("食材の説明を始めます。{{additional_explain}} が必要です。次に進む準備ができたら教えてください。もう一度聞きたい場合は、「もう一度教えて」と言ってください。")
+                    .zh("让我们开始解释食材。{{additional_explain}} 是必需的。准备好后请告诉我。如果你想再听一遍，请说“再告诉我一遍”。")
+            )));
+        match menu {
+            IntentCookingMenu::CarrotSalad => {
+                self.build_carrot_salad(&menu, &mut steps);
+            }
+            IntentCookingMenu::PotatoSalad => {
+                self.build_potato_salad(&menu, &mut steps);
+            }
+        }
+
         steps.push(
             Box::new(ExplainRecipeAction::new(
                 vec![],

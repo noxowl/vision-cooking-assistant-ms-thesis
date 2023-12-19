@@ -125,6 +125,7 @@ pub(crate) enum DetectionMode {
 #[derive(Debug, Clone, PartialEq, Copy)]
 pub(crate) enum DetectableObject {
     Carrot,
+    Potato,
     HumanSkin,
 }
 
@@ -137,6 +138,13 @@ impl DetectableObject {
                     .ja("にんじん")
                     .zh("胡萝卜")
                     .ko("당근")
+            }
+            DetectableObject::Potato => {
+                SmartSpeakerI18nText::new()
+                    .en("potato")
+                    .ja("じゃがいも")
+                    .zh("土豆")
+                    .ko("감자")
             }
             DetectableObject::HumanSkin => {
                 SmartSpeakerI18nText::new()
