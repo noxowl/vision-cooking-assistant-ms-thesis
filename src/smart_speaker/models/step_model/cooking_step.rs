@@ -460,6 +460,64 @@ impl VisionBasedIngredientMeasureAction {
                             })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                         }
                     }
+                    DetectableObject::Potato => {
+                        let target = self.ingredients.iter().find(|i| i.name == CookingIngredientName::Potato).unwrap();
+                        let weight_approx = target.name.get_weight_per_perimeter(first.size.perimeter);
+                        let diff = weight_approx.sub(target.unit).unwrap();
+                        if diff.get_value().is_sign_positive() {
+                            revisions.push(CookingRevisionEntity::new(
+                                0,
+                                CookingRevisionEntityProperty::Add(CookingIngredient {
+                                    name: CookingIngredientName::Potato,
+                                    unit: diff.abs(),
+                                })));
+                            tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
+                                "measure_result": "레시피에서 요구하는 양보다 더 많은 것 같네요."
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.en = reg.render_template(&self.tts_script.en, &json!({
+                                "measure_result": "It seems to be more than the amount required by the recipe."
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
+                                "measure_result": "レシピで必要な量よりも多いようです。"
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
+                                "measure_result": "看起来比食谱所需的量多。"
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                        } else {
+                            revisions.push(CookingRevisionEntity::new(
+                                0,
+                                CookingRevisionEntityProperty::Sub(CookingIngredient {
+                                    name: CookingIngredientName::Potato,
+                                    unit: diff.abs(),
+                                })));
+                            tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
+                                "measure_result": "레시피에서 요구하는 양보다 더 적은 것 같네요."
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.en = reg.render_template(&self.tts_script.en, &json!({
+                                "measure_result": "It seems to be less than the amount required by the recipe."
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
+                                "measure_result": "レシピで必要な量よりも少ないようです。"
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
+                                "measure_result": "看起来比食谱所需的量少。"
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                        }
+                        if diff.get_value() <= (target.unit.get_value() * 0.05) {
+                            tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
+                                "measure_result": "레시피에서 요구하는 양과 비슷한 것 같네요."
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.en = reg.render_template(&self.tts_script.en, &json!({
+                                "measure_result": "It seems to be similar to the amount required by the recipe."
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
+                                "measure_result": "レシピで必要な量と似ているようです。"
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                            tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
+                                "measure_result": "看起来与食谱所需的量相似。"
+                            })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
+                        }
+                    }
                     _ => {}
                 }
             }
@@ -801,7 +859,7 @@ impl CookingStepBuilder {
                 Box::new(VisionBasedIngredientMeasureAction::new(
                     vec![CookingIngredient::new(
                         CookingIngredientName::Potato,
-                        CookingIngredientAmount::MilliGram(100))],
+                        CookingIngredientAmount::MilliGram(150))],
                     CookingActionDetail::MeasureIngredientSize,
                     VisionAction::ObjectDetection(DetectionDetail::new(
                         DetectionMode ::Aruco,
@@ -840,10 +898,10 @@ impl CookingStepBuilder {
                         menu.to_ingredient().iter().filter(|ing| matches!(ing.name, CookingIngredientName::Salt|CookingIngredientName::Pepper|CookingIngredientName::SesameOil)).map(|ing| ing.clone()).collect::<Vec<CookingIngredient>>()
                     )),
                 SmartSpeakerI18nText::new()
-                    .ko("삶은 감자를 보울에 담아 소금 {{salt}},    후추 {{pepper}},    참기름 {{sesame_oil}}을 넣고 섞어주세요.")
-                    .en("Put the boiled potatoes in a bowl and add {{salt}} of salt,    {{pepper}} of pepper,    and {{sesame_oil}} of sesame oil.")
-                    .ja("茹でたじゃがいもをボウルに入れて塩　{{salt}}、　　　コショウ　{{pepper}}、　　　ごま油　{{sesame_oil}}　　　を入れて混ぜます。")
-                    .zh("把煮好的土豆放在碗里，加{{salt}}的盐，   {{pepper}}的胡椒粉，   {{sesame_oil}}的芝麻油。")
+                    .ko("삶은 감자를 보울에 담아 소금 {{salt}},    후추 {{pepper}},    마요네즈 {{mayonnaise}}을 넣고 섞어주세요.")
+                    .en("Put the boiled potatoes in a bowl and add {{salt}} of salt,    {{pepper}} of pepper,    and {{mayonnaise}} of mayonnaise.")
+                    .ja("茹でたじゃがいもをボウルに入れて塩　{{salt}}、　　　コショウ　{{pepper}}、　　　マヨネーズ　{{mayonnaise}}　　　を入れて混ぜます。")
+                    .zh("把煮好的土豆放在碗里，加{{salt}}的盐，   {{pepper}}的胡椒粉，   {{mayonnaise}}的蛋黄酱。")
             )));
     }
 

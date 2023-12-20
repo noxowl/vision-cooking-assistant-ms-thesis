@@ -75,6 +75,11 @@ impl DebugData {
                     }
                 }
             }
+            SmartSpeakerState::Speaking => {
+                // Navy screen
+                display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::new(128., 0., 0., 255.)).unwrap();
+                imgproc::put_text(&mut display_frame, "Speaking...", Point::new(240, 320), 1, 1., Scalar::new(255., 255., 255., 255.), 1, 0, false).unwrap();
+            }
         }
         highgui::imshow("Indicator Screen", &display_frame).unwrap();
         highgui::wait_key(1).unwrap();
@@ -96,6 +101,9 @@ impl DebugData {
                     }
                     SmartSpeakerState::WaitingForInteraction(pending_type) => {
                         debug_controller::write_text_to_mat(&mut display_frame, &format!("pending for {}", pending_type), 10, 40);
+                    }
+                    SmartSpeakerState::Speaking => {
+                        debug_controller::write_text_to_mat(&mut display_frame, "Speaking", 10, 40);
                     }
                 }
                 debug_controller::write_text_to_mat(&mut display_frame, &format!("Gaze: ({}, {})", self.gaze_x, self.gaze_y), 10, 20);

@@ -98,13 +98,13 @@ impl IntentCookingMenu {
                     CookingIngredientAmount::MilliGram(1500)),
                 CookingIngredient::new(
                     CookingIngredientName::Salt,
-                    CookingIngredientAmount::MilliGram(50)),
+                    CookingIngredientAmount::MilliGram(20)),
                 CookingIngredient::new(
                     CookingIngredientName::Pepper,
-                    CookingIngredientAmount::MilliGram(50)),
+                    CookingIngredientAmount::MilliGram(20)),
                 CookingIngredient::new(
-                    CookingIngredientName::SesameOil,
-                    CookingIngredientAmount::MilliLiter(5)),
+                    CookingIngredientName::Mayonnaise,
+                    CookingIngredientAmount::MilliLiter(15)),
             ],
         }
     }

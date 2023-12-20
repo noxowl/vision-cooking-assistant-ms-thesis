@@ -6,6 +6,7 @@ pub(crate) enum SmartSpeakerState {
     Idle,
     Attention,
     WaitingForInteraction(WaitingInteraction),
+    Speaking,
 }
 
 impl Display for SmartSpeakerState {
@@ -14,6 +15,7 @@ impl Display for SmartSpeakerState {
             SmartSpeakerState::Idle => write!(f, "Idle"),
             SmartSpeakerState::Attention => write!(f, "Attention"),
             SmartSpeakerState::WaitingForInteraction(waiting) => write!(f, "Pending({})", &waiting),
+            SmartSpeakerState::Speaking => write!(f, "Speaking"),
         }
     }
 }

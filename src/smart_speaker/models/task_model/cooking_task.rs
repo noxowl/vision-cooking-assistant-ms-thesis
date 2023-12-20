@@ -258,6 +258,7 @@ pub(crate) enum CookingIngredientName {
     Carrot,
     Onion,
     Potato,
+    Mayonnaise,
 }
 
 impl CookingIngredientName {
@@ -347,6 +348,13 @@ impl CookingIngredientName {
                     .zh("土豆")
                     .ko("감자")
             }
+            CookingIngredientName::Mayonnaise => {
+                SmartSpeakerI18nText::new()
+                    .en("mayonnaise")
+                    .ja("マヨネーズ")
+                    .zh("蛋黄酱")
+                    .ko("마요네즈")
+            }
         }
     }
 
@@ -387,6 +395,9 @@ impl CookingIngredientName {
             }
             CookingIngredientName::Potato => {
                 "potato".to_string()
+            }
+            CookingIngredientName::Mayonnaise => {
+                "mayonnaise".to_string()
             }
         }
     }
@@ -429,6 +440,9 @@ impl CookingIngredientName {
             CookingIngredientName::Potato => {
                 SmartSpeakerMaterialProperty::Solid
             }
+            CookingIngredientName::Mayonnaise => {
+                SmartSpeakerMaterialProperty::Liquid
+            }
         }
     }
 
@@ -456,6 +470,19 @@ impl CookingIngredientName {
         match self {
             CookingIngredientName::Carrot => {
                 let criteria = (60.0, 1000);
+                let adjusted_perimeter = perimeter * 1.05;
+                let calculated_weight = (adjusted_perimeter / criteria.0) * criteria.1 as f32;
+                let weight_with_error = calculated_weight * 0.95;
+
+                let rounded_weight = if perimeter >= 50.0 {
+                    ((weight_with_error / 25.0).round()) as i32 * 25
+                } else {
+                    ((weight_with_error / 2.5).round()) as i32 * 2
+                };
+                CookingIngredientAmount::MilliGram(rounded_weight)
+            }
+            CookingIngredientName::Potato => {
+                let criteria = (60.0, 700);
                 let adjusted_perimeter = perimeter * 1.05;
                 let calculated_weight = (adjusted_perimeter / criteria.0) * criteria.1 as f32;
                 let weight_with_error = calculated_weight * 0.95;
