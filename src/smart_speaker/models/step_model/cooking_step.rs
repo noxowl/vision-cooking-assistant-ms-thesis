@@ -117,6 +117,7 @@ impl ActionExecutable for ExplainRecipeAction {
                                     "sesame": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Sesame).and_then(|object| Some(object.to_approx_unit_i18n().en)),
                                     "sesame_oil": self.ingredients.iter().find(|i| i.name == CookingIngredientName::SesameOil).and_then(|object| Some(object.to_approx_unit_i18n().en)),
                                     "carrot": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Carrot).and_then(|object| Some(object.to_approx_unit_i18n().en)),
+                                    "mayonnaise": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Mayonnaise).and_then(|object| Some(object.to_approx_unit_i18n().en)),
                                 })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                                 tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
                                     "salt": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Salt).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
@@ -126,6 +127,7 @@ impl ActionExecutable for ExplainRecipeAction {
                                     "sesame": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Sesame).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
                                     "sesame_oil": self.ingredients.iter().find(|i| i.name == CookingIngredientName::SesameOil).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
                                     "carrot": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Carrot).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
+                                    "mayonnaise": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Mayonnaise).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
                                 })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                                 tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
                                     "salt": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Salt).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
@@ -135,6 +137,7 @@ impl ActionExecutable for ExplainRecipeAction {
                                     "sesame": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Sesame).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
                                     "sesame_oil": self.ingredients.iter().find(|i| i.name == CookingIngredientName::SesameOil).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
                                     "carrot": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Carrot).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
+                                    "mayonnaise": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Mayonnaise).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
                                 })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                                 tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
                                     "salt": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Salt).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
@@ -144,6 +147,7 @@ impl ActionExecutable for ExplainRecipeAction {
                                     "sesame": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Sesame).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
                                     "sesame_oil": self.ingredients.iter().find(|i| i.name == CookingIngredientName::SesameOil).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
                                     "carrot": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Carrot).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
+                                    "mayonnaise": self.ingredients.iter().find(|i| i.name == CookingIngredientName::Mayonnaise).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
                                 })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                             }
                             Some(rev) => {
@@ -174,6 +178,7 @@ impl ActionExecutable for ExplainRecipeAction {
                                         "sesame": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Sesame).and_then(|object| Some(object.to_approx_unit_i18n().en)),
                                         "sesame_oil": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::SesameOil).and_then(|object| Some(object.to_approx_unit_i18n().en)),
                                         "carrot": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Carrot).and_then(|object| Some(object.to_approx_unit_i18n().en)),
+                                        "mayonnaise": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Mayonnaise).and_then(|object| Some(object.to_approx_unit_i18n().en)),
                                     })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                                     tts_script.ja = reg.render_template(&self.tts_script.ja, &json!({
                                         "salt": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Salt).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
@@ -183,6 +188,7 @@ impl ActionExecutable for ExplainRecipeAction {
                                         "sesame": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Sesame).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
                                         "sesame_oil": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::SesameOil).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
                                         "carrot": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Carrot).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
+                                        "mayonnaise": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Mayonnaise).and_then(|object| Some(object.to_approx_unit_i18n().ja)),
                                     })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                                     tts_script.zh = reg.render_template(&self.tts_script.zh, &json!({
                                         "salt": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Salt).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
@@ -192,6 +198,7 @@ impl ActionExecutable for ExplainRecipeAction {
                                         "sesame": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Sesame).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
                                         "sesame_oil": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::SesameOil).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
                                         "carrot": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Carrot).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
+                                        "mayonnaise": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Mayonnaise).and_then(|object| Some(object.to_approx_unit_i18n().zh)),
                                     })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                                     tts_script.ko = reg.render_template(&self.tts_script.ko, &json!({
                                         "salt": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Salt).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
@@ -201,6 +208,7 @@ impl ActionExecutable for ExplainRecipeAction {
                                         "sesame": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Sesame).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
                                         "sesame_oil": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::SesameOil).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
                                         "carrot": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Carrot).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
+                                        "mayonnaise": ingredients_updated.iter().find(|i| i.name == CookingIngredientName::Mayonnaise).and_then(|object| Some(object.to_approx_unit_i18n().ko)),
                                     })).map_err(|e| anyhow!("failed to render template: {}", e)).unwrap();
                                     return Ok(SmartSpeakerTaskResult::with_tts_and_revision(
                                         self.get_action_trigger_type().to_task_type(),
@@ -895,7 +903,7 @@ impl CookingStepBuilder {
                 CookingActionDetail::ExplainMutableIngredient(
                     CookingIngredientLinkComponent::new(
                         menu.to_ingredient().iter().find(|i| i.name == CookingIngredientName::Potato).unwrap().clone(),
-                        menu.to_ingredient().iter().filter(|ing| matches!(ing.name, CookingIngredientName::Salt|CookingIngredientName::Pepper|CookingIngredientName::SesameOil)).map(|ing| ing.clone()).collect::<Vec<CookingIngredient>>()
+                        menu.to_ingredient().iter().filter(|ing| matches!(ing.name, CookingIngredientName::Salt|CookingIngredientName::Pepper|CookingIngredientName::Mayonnaise)).map(|ing| ing.clone()).collect::<Vec<CookingIngredient>>()
                     )),
                 SmartSpeakerI18nText::new()
                     .ko("삶은 감자를 보울에 담아 소금 {{salt}},    후추 {{pepper}},    마요네즈 {{mayonnaise}}을 넣고 섞어주세요.")
