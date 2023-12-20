@@ -125,6 +125,9 @@ impl FromStr for IntentCookingMenu {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
             "carrot salad" => Ok(IntentCookingMenu::CarrotSalad),
+            "胡萝卜沙拉" => Ok(IntentCookingMenu::CarrotSalad),
+            "胡萝卜泥沙拉" => Ok(IntentCookingMenu::CarrotSalad),
+            "胡萝卜温沙拉" => Ok(IntentCookingMenu::CarrotSalad),
             "にんじんサラダ" => Ok(IntentCookingMenu::CarrotSalad),
             "人参サラダ" => Ok(IntentCookingMenu::CarrotSalad),
             "にんじんのサラダ" => Ok(IntentCookingMenu::CarrotSalad),
@@ -140,6 +143,9 @@ impl FromStr for IntentCookingMenu {
             "ぽてとサラダ" => Ok(IntentCookingMenu::PotatoSalad),
             "ポテトサラダりようり" => Ok(IntentCookingMenu::PotatoSalad),
             "ぽてとさらだりようり" => Ok(IntentCookingMenu::PotatoSalad),
+            "土豆沙拉" => Ok(IntentCookingMenu::PotatoSalad),
+            "土豆泥沙拉" => Ok(IntentCookingMenu::PotatoSalad),
+            "土豆泥温沙拉" => Ok(IntentCookingMenu::PotatoSalad),
             _ => Err(()),
         }
     }

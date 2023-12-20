@@ -51,7 +51,9 @@ impl WakeWordDetector {
             }
         } else {
             Self {
-                app: PorcupineBuilder::new_with_keyword_paths(api_key, &[context_path]).model_path("picovoice_data/porcupine_params_ja_v3_0_0.pv").init().unwrap(),
+                // TODO: change to multi language support
+                // app: PorcupineBuilder::new_with_keyword_paths(api_key, &[context_path]).model_path("picovoice_data/porcupine_params_ja_v3_0_0.pv").init().unwrap(),
+                app: PorcupineBuilder::new_with_keyword_paths(api_key, &[context_path]).model_path("picovoice_data/porcupine_params_zh_v3_0_0.pv").init().unwrap(),
             }
         }
 
@@ -105,7 +107,8 @@ pub(crate) struct SpeechToIntent {
 impl SpeechToIntent {
     pub fn new(api_key: String, context_path: String) -> Self {
         Self {
-            app: RhinoBuilder::new(api_key, context_path).model_path("picovoice_data/rhino_params_ja_v3_0_0.pv").init().unwrap(),
+            // app: RhinoBuilder::new(api_key, context_path).model_path("picovoice_data/rhino_params_ja_v3_0_0.pv").init().unwrap(),
+            app: RhinoBuilder::new(api_key, context_path).model_path("picovoice_data/rhino_params_zh_v3_0_0.pv").init().unwrap(),
         }
     }
 
