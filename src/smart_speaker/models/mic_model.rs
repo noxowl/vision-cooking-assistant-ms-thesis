@@ -1,4 +1,4 @@
-use pv_recorder::{Recorder, RecorderBuilder};
+use pv_recorder::{PvRecorder, PvRecorderBuilder, };
 use cobra::{Cobra};
 use rhino::{Rhino, RhinoBuilder, RhinoInference};
 use porcupine::{Porcupine, PorcupineBuilder, BuiltinKeywords};
@@ -7,19 +7,19 @@ use anyhow::{anyhow, Result};
 
 #[derive(Clone)]
 pub(crate) struct AudioListener {
-    pub recorder: Recorder,
+    pub recorder: PvRecorder,
 }
 
 impl AudioListener {
     pub fn new(mic_index: u32) -> Self {
         Self {
-            recorder: RecorderBuilder::new().device_index(mic_index as i32).init().unwrap(),
+            recorder: PvRecorderBuilder::default().device_index(mic_index as i32).init().unwrap(),
         }
     }
 
     pub fn info(&mut self) -> String {
-        dbg!(self.recorder.get_audio_devices().unwrap());
-        format!("{:?}", self.recorder.get_audio_devices().unwrap()).to_string()
+        let audio_devices = PvRecorderBuilder::default().get_available_devices().unwrap();
+        format!("{:?}", audio_devices).to_string()
     }
 
     pub fn start(&mut self) {
@@ -31,9 +31,8 @@ impl AudioListener {
     }
 
     pub fn update(&mut self) -> Result<Vec<i16>> {
-        let mut pcm = vec![0; self.recorder.frame_length()];
-        match self.recorder.read(&mut pcm) {
-            Ok(_) => Ok(pcm),
+        match self.recorder.read() {
+            Ok(pcm) => Ok(pcm),
             Err(_) => Err(anyhow!("failed to read audio frame"))
         }
     }
@@ -52,7 +51,7 @@ impl WakeWordDetector {
             }
         } else {
             Self {
-                app: PorcupineBuilder::new_with_keyword_paths(api_key, &[context_path]).model_path("picovoice_data/porcupine_params_ja.pv").init().unwrap(),
+                app: PorcupineBuilder::new_with_keyword_paths(api_key, &[context_path]).model_path("picovoice_data/porcupine_params_ja_v3_0_0.pv").init().unwrap(),
             }
         }
 
@@ -106,7 +105,7 @@ pub(crate) struct SpeechToIntent {
 impl SpeechToIntent {
     pub fn new(api_key: String, context_path: String) -> Self {
         Self {
-            app: RhinoBuilder::new(api_key, context_path).model_path("picovoice_data/rhino_params_ja.pv").init().unwrap(),
+            app: RhinoBuilder::new(api_key, context_path).model_path("picovoice_data/rhino_params_ja_v3_0_0.pv").init().unwrap(),
         }
     }
 
