@@ -351,6 +351,9 @@ impl CoreActorMessageHandler {
                 if let Some(sender) = senders.get(&SmartSpeakerActors::MachineSpeechActor) {
                     sender.send(message).expect("TODO: panic message");
                 }
+                if self.debug.activated {
+                    self.debug.update_state(SmartSpeakerState::Speaking, SmartSpeakerActors::CoreActor);
+                }
                 CoreActorState::WaitForNextMessage {}
             },
             SmartSpeakerMessage::IntentFinalized(IntentFinalizedMessage { send_from: _, send_to: _, result: _, content: _ }) => {
