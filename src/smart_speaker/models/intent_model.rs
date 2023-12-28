@@ -136,6 +136,7 @@ impl FromStr for IntentCookingMenu {
             "にんじんほっとさらだ" => Ok(IntentCookingMenu::CarrotSalad),
             "にんじんサラダりようり" => Ok(IntentCookingMenu::CarrotSalad),
             "ポテトサラダ" => Ok(IntentCookingMenu::PotatoSalad),
+            "ポテサラ" => Ok(IntentCookingMenu::PotatoSalad),
             "ポテトのサラダ" => Ok(IntentCookingMenu::PotatoSalad),
             "ポテトりようり" => Ok(IntentCookingMenu::PotatoSalad),
             "ポテトのほっとサラダ" => Ok(IntentCookingMenu::PotatoSalad),

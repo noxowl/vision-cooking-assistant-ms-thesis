@@ -43,18 +43,18 @@ impl DebugData {
             SmartSpeakerState::Idle => {
                 // Black screen
                 display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::all(0.)).unwrap();
-                imgproc::put_text(&mut display_frame, "Waiting for Wake up...", Point::new(240, 320), 1, 1., Scalar::new(255., 255., 255., 255.), 1, 0, false).unwrap();
+                imgproc::put_text(&mut display_frame, "Waiting for Wake word 'Hey Ringo'ウェイクワードをお待ちしております / 等待唤醒", Point::new(240, 320), 1, 1., Scalar::new(255., 255., 255., 255.), 1, 0, false).unwrap();
             }
             SmartSpeakerState::Attention => {
                 // Green Screen
                 match &self.state.1 {
                     SmartSpeakerActors::SpeechToIntentActor => {
                         display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::new(0., 255., 0., 255.)).unwrap();
-                        imgproc::put_text(&mut display_frame, "Listening...", Point::new(240, 320), 1, 1., Scalar::new(0., 0., 0., 255.), 1, 0, false).unwrap();
+                        imgproc::put_text(&mut display_frame,  "Waiting for your command. 命令を言ってください / 说出命令", Point::new(240, 320), 1, 1., Scalar::new(0., 0., 0., 255.), 1, 0, false).unwrap();
                     }
                     SmartSpeakerActors::VoiceActivityDetectActor => {
                         display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::all(0.)).unwrap();
-                        imgproc::put_text(&mut display_frame, "Waiting for Voice Activity...", Point::new(240, 320), 1, 1., Scalar::new(255., 255., 255., 255.), 1, 0, false).unwrap();
+                        imgproc::put_text(&mut display_frame, "Waiting for your speech begin.  お話の準備ができたかどうかお待ちしております / 我们在等着看你是否准备好发言了", Point::new(240, 320), 1, 1., Scalar::new(255., 255., 255., 255.), 1, 0, false).unwrap();
                     }
                     _ => {}
                 }
@@ -65,7 +65,7 @@ impl DebugData {
                 match pending_type {
                     WaitingInteraction::Speak => {
                         display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::new(0., 255., 255., 255.)).unwrap();
-                        imgproc::put_text(&mut display_frame, "Wait for Speak...", Point::new(240, 320), 1, 1., Scalar::new(0., 0., 0., 255.), 1, 0, false).unwrap();
+                        imgproc::put_text(&mut display_frame, "Waiting for your speech begin. お話の準備ができたかどうかお待ちしております / 我们在等着看你是否准备好发言了", Point::new(240, 320), 1, 1., Scalar::new(0., 0., 0., 255.), 1, 0, false).unwrap();
                     }
                     WaitingInteraction::Vision(_) => {
                         display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::new(0., 255., 255., 255.)).unwrap();
@@ -78,7 +78,7 @@ impl DebugData {
             SmartSpeakerState::Speaking => {
                 // Navy screen
                 display_frame = Mat::new_rows_cols_with_default(480, 640, opencv::core::CV_8UC3, opencv::core::Scalar::new(128., 0., 0., 255.)).unwrap();
-                imgproc::put_text(&mut display_frame, "Speaking...", Point::new(240, 320), 1, 1., Scalar::new(255., 255., 255., 255.), 1, 0, false).unwrap();
+                imgproc::put_text(&mut display_frame, "I'm talking. 私が話しています / 我说的是", Point::new(240, 320), 1, 1., Scalar::new(255., 255., 255., 255.), 1, 0, false).unwrap();
             }
         }
         highgui::imshow("Indicator Screen", &display_frame).unwrap();

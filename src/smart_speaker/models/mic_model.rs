@@ -4,6 +4,7 @@ use rhino::{Rhino, RhinoBuilder, RhinoInference};
 use porcupine::{Porcupine, PorcupineBuilder, BuiltinKeywords};
 // use cheetah::{Cheetah, CheetahBuilder};
 use anyhow::{anyhow, Result};
+use crate::utils::config_util::LanguageTag;
 
 #[derive(Clone)]
 pub(crate) struct AudioListener {
@@ -43,18 +44,36 @@ pub(crate) struct WakeWordDetector {
 }
 
 impl WakeWordDetector {
-    pub fn new(api_key: String, context_path: String) -> Self {
+    pub fn new(api_key: String, context_path: String, language: LanguageTag) -> Self {
         if context_path == "default" {
             Self {
                 app: PorcupineBuilder::new_with_keywords(api_key,
                                                          &[BuiltinKeywords::Jarvis, BuiltinKeywords::Alexa]).init().unwrap(),
             }
         } else {
-            Self {
-                // TODO: change to multi language support
-                // app: PorcupineBuilder::new_with_keyword_paths(api_key, &[context_path]).model_path("picovoice_data/porcupine_params_ja_v3_0_0.pv").init().unwrap(),
-                app: PorcupineBuilder::new_with_keyword_paths(api_key, &[context_path]).model_path("picovoice_data/porcupine_params_zh_v3_0_0.pv").init().unwrap(),
+            match language {
+                LanguageTag::English => {
+                    Self {
+                        app: PorcupineBuilder::new_with_keyword_paths(api_key, &[context_path]).model_path("picovoice_data/porcupine_params_en_v3_0_0.pv").init().unwrap(),
+                    }
+                }
+                LanguageTag::Japanese => {
+                    Self {
+                        app: PorcupineBuilder::new_with_keyword_paths(api_key, &[context_path]).model_path("picovoice_data/porcupine_params_ja_v3_0_0.pv").init().unwrap(),
+                    }
+                }
+                LanguageTag::Chinese => {
+                    Self {
+                        app: PorcupineBuilder::new_with_keyword_paths(api_key, &[context_path]).model_path("picovoice_data/porcupine_params_zh_v3_0_0.pv").init().unwrap(),
+                    }
+                }
+                LanguageTag::Korean => {
+                    Self {
+                        app: PorcupineBuilder::new_with_keyword_paths(api_key, &[context_path]).model_path("picovoice_data/porcupine_params_ko_v3_0_0.pv").init().unwrap(),
+                    }
+                }
             }
+
         }
 
     }
@@ -105,10 +124,28 @@ pub(crate) struct SpeechToIntent {
 }
 
 impl SpeechToIntent {
-    pub fn new(api_key: String, context_path: String) -> Self {
-        Self {
-            // app: RhinoBuilder::new(api_key, context_path).model_path("picovoice_data/rhino_params_ja_v3_0_0.pv").init().unwrap(),
-            app: RhinoBuilder::new(api_key, context_path).model_path("picovoice_data/rhino_params_zh_v3_0_0.pv").init().unwrap(),
+    pub fn new(api_key: String, context_path: String, language: LanguageTag) -> Self {
+        match language {
+            LanguageTag::English => {
+                Self {
+                    app: RhinoBuilder::new(api_key, context_path).model_path("picovoice_data/rhino_params_en_v3_0_0.pv").init().unwrap(),
+                }
+            }
+            LanguageTag::Japanese => {
+                Self {
+                    app: RhinoBuilder::new(api_key, context_path).model_path("picovoice_data/rhino_params_ja_v3_0_0.pv").init().unwrap(),
+                }
+            }
+            LanguageTag::Chinese => {
+                Self {
+                    app: RhinoBuilder::new(api_key, context_path).model_path("picovoice_data/rhino_params_zh_v3_0_0.pv").init().unwrap(),
+                }
+            }
+            LanguageTag::Korean => {
+                Self {
+                    app: RhinoBuilder::new(api_key, context_path).model_path("picovoice_data/rhino_params_ko_v3_0_0.pv").init().unwrap(),
+                }
+            }
         }
     }
 

@@ -114,7 +114,9 @@ impl CoreActorManager {
             }
             SmartSpeakerActors::WakeWordActor => {
                 let mut wake_word_actor = WakeWordActor::new(
-                    WakeWordDetector::new(config.pico_voice_api_key.clone(), config.pico_voice_ppn_model_path.clone()),
+                    WakeWordDetector::new(config.pico_voice_api_key.clone(),
+                                          config.pico_voice_ppn_model_path.clone(),
+                                          config.language.clone()),
                     rx,
                     sender.clone(),
                 );
@@ -126,7 +128,8 @@ impl CoreActorManager {
             SmartSpeakerActors::SpeechToIntentActor => {
                 let mut speech_to_intent_actor = SpeechToIntentActor::new(
                     SpeechToIntent::new(config.pico_voice_api_key.clone(),
-                                        config.pico_voice_rhn_model_path.clone()),
+                                        config.pico_voice_rhn_model_path.clone(),
+                                        config.language.clone()),
                     rx,
                     sender.clone(),
                 );

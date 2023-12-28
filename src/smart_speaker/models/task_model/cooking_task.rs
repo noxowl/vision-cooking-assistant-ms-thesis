@@ -38,27 +38,46 @@ impl CookingIngredientTime {
         // If base is mg(250)/10min and rev is sub(mg(65)), the new base time is 7.5min(75) that means the time should be reduced by 3/4.
         // The quota calculation also approximates the value so that it falls in the 4/4 range whenever possible.
         // in this situation, if base=mg(250)/10min and rev=sub(mg(65))
-        // the result is mg(250)/7.5min(75)
+        // the result is mg(185)/7.5min(75)
         // if base=mg(250)/10min and rev=add(mg(65))
-        // the result is mg(250)/12.5min(125)
+        // the result is mg(315)/12.5min(125)
         // if base=mg(250)/10min and rev=add(mg(250))
-        // the result is mg(250)/20min(200)
+        // the result is mg(500)/20min(200)
         let adjustment_factor = match &rev.property {
-            CookingRevisionEntityProperty::Sub(ingredient) | CookingRevisionEntityProperty::Add(ingredient) => {
-                if ingredient.name != self.base.name {
-                    return None;
-                }
-                let revised_amount = if let CookingRevisionEntityProperty::Sub(_) = &rev.property {
-                    self.base.amount() - ingredient.amount()
-                } else {
-                    self.base.amount() + ingredient.amount()
-                };
-                1.0 + (revised_amount / self.base.amount()).sqrt()
+            CookingRevisionEntityProperty::Sub(ingredient) => {
+                1.0 - (ingredient.amount() / self.base.amount()).sqrt()
             }
+            CookingRevisionEntityProperty::Add(ingredient) => {
+                1.0 + (ingredient.amount() / self.base.amount()).sqrt()
+            },
         };
 
-        let new_time = ((self.time as f32).sqrt() * adjustment_factor).round() as u32;
-        let bounded_time = new_time.min(300).max(30);
+        // Calculate the time based on the base time (self.time) and the adjustment factor.
+        let adjusted_time = (self.time as f32 * adjustment_factor).round() as u32;
+
+        // Ensure the time is greater than or equal to 30
+        let clamped_time = adjusted_time.max(30);
+
+        // Ensure the time is lower than 30 minutes
+        let bounded_time = clamped_time.min(200);
+
+        // let adjustment_factor = match &rev.property {
+        //     CookingRevisionEntityProperty::Sub(ingredient) | CookingRevisionEntityProperty::Add(ingredient) => {
+        //         if ingredient.name != self.base.name {
+        //             return None;
+        //         }
+        //         let revised_amount = if let CookingRevisionEntityProperty::Sub(_) = &rev.property {
+        //             self.base.amount() - ingredient.amount()
+        //         } else {
+        //             self.base.amount() + ingredient.amount()
+        //         };
+        //         1.0 + (revised_amount / self.base.amount()).sqrt()
+        //     }
+        // };
+        //
+        // let new_time = ((self.time as f32).sqrt() * adjustment_factor).round() as u32;
+        // let bounded_time = new_time.min(300).max(30);
+
         Some(CookingIngredientTime::new(self.base.clone(), bounded_time))
     }
 
@@ -634,14 +653,14 @@ impl CookingIngredientAmount {
                 SmartSpeakerI18nText::new()
                     .en(&format!("{} tablespoon", amount.to_i18n().en))
                     .ja(&format!("おおさじ{}", amount.to_i18n().ja))
-                    .zh(&format!("大勺{}", amount.to_i18n().zh))
+                    .zh(&format!("{}大勺", amount.to_i18n().zh))
                     .ko(&format!("{}큰술", amount.to_i18n().ko))
             }
             CookingIngredientAmount::Tsp(amount) => {
                 SmartSpeakerI18nText::new()
                     .en(&format!("{} teaspoon", amount.to_i18n().en))
                     .ja(&format!("こさじ{}", amount.to_i18n().ja))
-                    .zh(&format!("小勺{}", amount.to_i18n().zh))
+                    .zh(&format!("{}小勺", amount.to_i18n().zh))
                     .ko(&format!("{}작은술", amount.to_i18n().ko))
             }
             CookingIngredientAmount::Cup(amount) => {
