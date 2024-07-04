@@ -8,7 +8,13 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.48"
-opencv = { version = "0.86.1", default-features = true }
+opencv = { version = "0.86.1", default-features = false, features = [
+    "clang-runtime",
+    "highgui",
+    "videoio",
+    "imgproc",
+    "objdetect",
+] }
 rgb = "0.8.23"
 zmq = "0.10.0"
 rmp = "0.8.11"
