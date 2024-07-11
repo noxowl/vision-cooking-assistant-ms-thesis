@@ -41,6 +41,11 @@ impl std::fmt::Display for SmartSpeakerActors {
 }
 
 #[derive(Debug, Clone, PartialEq)]
+pub(crate) enum SmartSpeakerSubtask {
+
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub(crate) enum SmartSpeakerMessage {
     StringMessage(StringMessage),
     RequestActorGenerate(ActorGenerateMessage),
@@ -56,6 +61,8 @@ pub(crate) enum SmartSpeakerMessage {
     IntentFinalized(IntentFinalizedMessage),
     VisionFinalized(VisionFinalizedMessage),
     TextToSpeechFinished(StringMessage),
+    SubTaskStart(SmartSpeakerSubtask),
+    SubTaskFinished(SmartSpeakerSubtask),
     WriteLog(LogMessage),
 }
 
