@@ -1,0 +1,22 @@
+cff-version: 1.2.0
+message: "If you use this code, please cite the following entry."
+title: "Voice Assistance Using Visual Information in Continuous Cooking Tasks to Extend User Experience"
+version: "1.0.0"
+date-released: 2024-03-22
+authors:
+  - family-names: Rhie
+    given-names: Suyeong
+    orcid: https://orcid.org/0009-0006-2431-4866
+    affiliation: Japan Advanced Institute of Science and Technology (JAIST)
+abstract: >
+  This prototype was developed as part of a joint-degree master’s program between JAIST and Kanazawa University, completed in March 2024. It explores the use of visual context to enhance voice-based interaction in continuous cooking tasks, and was implemented using an actor-based system architecture in Rust.
+type: software
+repository-code: https://github.com/noxowl/vision-cooking-assistant-ms-thesis
+license: BSD-3-Clause license
+keywords:
+  - human-computer interaction
+  - voice assistant
+  - visual context
+  - actor model
+  - cooking
+  - multimodal interaction
